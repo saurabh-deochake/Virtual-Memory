@@ -8,7 +8,9 @@
 
 #include "my_malloc.h"
 #include <stdlib.h>
+#include <sys/mman.h>
 
+void* physicalMemoryVoidPointer;
 char* physicalMemory;//[8388608]; //memalign( sysconf(_SC_PAGE_SIZE), 8388608);
 //[8388608]; //8MB physical Memory
 
@@ -40,9 +42,10 @@ void initMemoryStructures(){
     
     
     //#ifdef __APPLE__
-    physicalMemory = malloc(8388608);
+    //physicalMemory = malloc(8388608);
     //#else
-    //physicalMemory = memalign(getpagesize(), 8388608);
+    posix_memalign(&physicalMemoryVoidPointer,4096, 8388608);
+    physicalMemory = (char*)physicalMemoryVoidPointer;
     //#endif
     
     printf("Physical memory starts from %p\n",physicalMemory);
@@ -62,11 +65,31 @@ void initMemoryStructures(){
         }
         
     }
+    
+    mprotect( physicalMemory, 4096, PROT_NONE);
+    
+    struct sigaction sa;
+    sa.sa_flags = SA_SIGINFO;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_sigaction = handler;
+    
+    if (sigaction(SIGSEGV, &sa, NULL) == -1)
+    {
+        printf("Fatal error setting up signal handler\n");
+        exit(EXIT_FAILURE);
+    }
+    
+}
 
+static void handler(int sig, siginfo_t *si, void *unused)
+{
+    printf("Got SIGSEGV at address: 0x%lx\n",(long) si->si_addr);
+    exit(0);
 }
 
 
 void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq){
+    
     
     
     int size = numberOfBytes/4096 + 1;
@@ -77,19 +100,21 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
     
     int firstFrameFound = -1;
     struct PTRow* ptr = NULL;
+    struct PTRow* startPtr = NULL;
     void* pagePointer = NULL;
     
     while (size > 0) {
         ptr = allocateNextFreeFrame(ThreadReq);
         
         if(firstFrameFound == -1) {
-            pagePointer = getPagePointerFromNumber(ptr->PageNum);
+            //pagePointer = getPagePointerFromNumber(ptr->PageNum);
+            startPtr = ptr;
             firstFrameFound = 1;
         }
         
         size--;
     }
-    
+    pagePointer = getPagePointerFromThreadBlockNumber(startPtr->threadBlockNumber);
     return pagePointer;
 }
 
@@ -162,7 +187,10 @@ int getByteAdditionsForNthPage(int i){
     return (TotalPagesUsedByPTRows + i)*BytesPerPage;
 }
 
-
+void* getPagePointerFromThreadBlockNumber(int threadBlockNumber){
+    void* pageP = physicalMemory + (TotalPagesUsedByPTRows + threadBlockNumber)*BytesPerPage;
+    return pageP;
+}
 
 
 

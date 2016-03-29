@@ -16,7 +16,7 @@ int main(int argc, const char * argv[]) {
     initMemoryStructures();
     
     char* test = myallocate(3, "test ", "test" , 1);
-    printf("Line a\n");
+    /*printf("Line a\n");
     *(test) = 'a';
     *(test+1) = 'b';
     *(test+2) = 'c';
@@ -27,6 +27,6 @@ int main(int argc, const char * argv[]) {
     int temp = getByteAdditionsForNthPage(0);
     printf("%c%c%c\n",*(pm+temp),*(pm+temp+1),*(pm+temp+2));
     printf("test is %p, and pm+temp is %p\n",test,pm+temp);
-    
+    */
     return 0;
 }

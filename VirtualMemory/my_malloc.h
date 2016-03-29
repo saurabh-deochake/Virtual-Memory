@@ -10,6 +10,7 @@
 #define __VirtualMemory__my_malloc__
 
 #include <stdio.h>
+#include <signal.h>
 
 #endif
 
@@ -19,6 +20,8 @@
 //const int OffsetToFirstUsablePage = TotalBytesUsedByPTRows;
 
 void initMemoryStructures();
+
+static void handler(int sig, siginfo_t *si, void *unused);
 
 void* myallocate(int size,char* fileName,char* lineNumber,int ThreadReq);
 
@@ -31,6 +34,8 @@ struct PTRow* getMappedPTRow(int PageNumber);
 void* getPagePointerFromNumber(int pageNumber);
 
 int getByteAdditionsForNthPage();
+
+void* getPagePointerFromThreadBlockNumber(int threadBlockNumber);
 //int* mydeallocate(int size,char* fileName,char* lineNumber,int ThreadReq)
 
 
