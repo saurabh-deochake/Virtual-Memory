@@ -19,14 +19,12 @@ int main(int argc, const char * argv[]) {
     *(test) = 'a';
     *(test+1) = 'b';
     *(test+2) = 'c';
-    
     printf("%c%c%c\n",*(test),*(test+1),*(test+2));
     
     char* pm = getPhyMem();
-    int temp = getIndexForFirstPage();
+    int temp = getByteAdditionsForNthPage(0);
     printf("%c%c%c\n",*(pm+temp),*(pm+temp+1),*(pm+temp+2));
-    char* tt = pm+temp;
-    printf("test is %x, and pm+temp is %x\n",test,tt);
+    printf("test is %p, and pm+temp is %p\n",test,pm+temp);
     
     return 0;
 }

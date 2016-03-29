@@ -30,7 +30,8 @@ struct PTRow* getMappedPTRow(int PageNumber);
 
 void* getPagePointerFromNumber(int pageNumber);
 
-char* getPhyMem();
-
-int getIndexForFirstPage();
+int getByteAdditionsForNthPage();
 //int* mydeallocate(int size,char* fileName,char* lineNumber,int ThreadReq)
+
+
+char* getPhyMem();

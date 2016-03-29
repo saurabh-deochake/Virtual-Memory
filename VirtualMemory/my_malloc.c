@@ -7,9 +7,10 @@
 //
 
 #include "my_malloc.h"
+#include <stdlib.h>
 
-
-char physicalMemory[8388608]; //8MB physical Memory
+char* physicalMemory;//[8388608]; //memalign( sysconf(_SC_PAGE_SIZE), 8388608);
+//[8388608]; //8MB physical Memory
 
 struct PTRow {
     int isAllocated;
@@ -27,7 +28,15 @@ const int TotalUsablePages = TotalPages - TotalPagesUsedByPTRows;
 int remainingFreeFrames = TotalPages;
 
 void initMemoryStructures(){
-    printf("Physical memory starts from %x\n",physicalMemory);
+    
+    #ifdef __APPLE__
+    physicalMemory = malloc(8388608);
+    #else
+    physicalMemory = memalign(sysconf(_SC_PAGE_SIZE), 8388608);
+    #endif
+    
+    printf("Physical memory starts from %p\n",physicalMemory);
+    //printf("pagesizee is %d\n",getpagesize());
     //struct PTRow *ptr = physicalMemory;
     int count = 0;
     remainingFreeFrames = TotalPages;
@@ -134,11 +143,9 @@ void* getPagePointerFromNumber(int pageNumber){
     return page;
 }
 
-
-
-
-
-
+int getByteAdditionsForNthPage(int i){
+    return (TotalPagesUsedByPTRows + i)*BytesPerPage;
+}
 
 
 
@@ -149,9 +156,7 @@ char* getPhyMem(){
     return physicalMemory;
 }
 
-int getIndexForFirstPage(){
-    return (TotalPagesUsedByPTRows + 0)*BytesPerPage;
-}
+
 
 
 
