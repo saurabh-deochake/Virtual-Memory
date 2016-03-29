@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		620C4F4C1CAABEB600FC2604 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 620C4F4B1CAABEB600FC2604 /* main.c */; };
+		620C4F541CAAC38100FC2604 /* my_malloc.c in Sources */ = {isa = PBXBuildFile; fileRef = 620C4F521CAAC38100FC2604 /* my_malloc.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -25,6 +26,8 @@
 /* Begin PBXFileReference section */
 		620C4F481CAABEB600FC2604 /* VirtualMemory */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = VirtualMemory; sourceTree = BUILT_PRODUCTS_DIR; };
 		620C4F4B1CAABEB600FC2604 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		620C4F521CAAC38100FC2604 /* my_malloc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = my_malloc.c; sourceTree = "<group>"; };
+		620C4F531CAAC38100FC2604 /* my_malloc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = my_malloc.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -58,6 +61,8 @@
 			isa = PBXGroup;
 			children = (
 				620C4F4B1CAABEB600FC2604 /* main.c */,
+				620C4F521CAAC38100FC2604 /* my_malloc.c */,
+				620C4F531CAAC38100FC2604 /* my_malloc.h */,
 			);
 			path = VirtualMemory;
 			sourceTree = "<group>";
@@ -119,6 +124,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				620C4F4C1CAABEB600FC2604 /* main.c in Sources */,
+				620C4F541CAAC38100FC2604 /* my_malloc.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -232,6 +238,7 @@
 				620C4F511CAABEB600FC2604 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
