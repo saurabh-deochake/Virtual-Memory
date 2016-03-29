@@ -18,7 +18,19 @@
 //const int TotalBytesUsedByPTRows = 2048 * sizeof(struct PTRow);
 //const int OffsetToFirstUsablePage = TotalBytesUsedByPTRows;
 
+void initMemoryStructures();
 
-int* myallocate(int size,char* fileName,char* lineNumber,int ThreadReq);
+void* myallocate(int size,char* fileName,char* lineNumber,int ThreadReq);
 
+struct PTRow* allocateNextFreeFrame(int ThreadID);
+
+int getLastThreadBlockNumber(int ThreadID);
+
+struct PTRow* getMappedPTRow(int PageNumber);
+
+void* getPagePointerFromNumber(int pageNumber);
+
+char* getPhyMem();
+
+int getIndexForFirstPage();
 //int* mydeallocate(int size,char* fileName,char* lineNumber,int ThreadReq)
