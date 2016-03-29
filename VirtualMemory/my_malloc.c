@@ -20,30 +20,42 @@ struct PTRow {
 };
 
 const int TotalPages = 2048;
-const int TotalPTRows = TotalPages;
 const int BytesPerPage = 4096;
-const int PTRowsPerPage = (BytesPerPage / sizeof(struct PTRow));
-const int TotalPagesUsedByPTRows = TotalPTRows/PTRowsPerPage;
-const int TotalUsablePages = TotalPages - TotalPagesUsedByPTRows;
-int remainingFreeFrames = TotalPages;
+
+int TotalPTRows;
+int PTRowsPerPage;
+int TotalPagesUsedByPTRows;
+int TotalUsablePages;
+int remainingFreeFrames;
+
+
 
 void initMemoryStructures(){
     
-    #ifdef __APPLE__
+    TotalPTRows = TotalPages;
+    PTRowsPerPage = (BytesPerPage / sizeof(struct PTRow));
+    TotalPagesUsedByPTRows = TotalPTRows/PTRowsPerPage;
+    TotalUsablePages = TotalPages - TotalPagesUsedByPTRows;
+    remainingFreeFrames = TotalPages;
+    
+    
+    //#ifdef __APPLE__
     physicalMemory = malloc(8388608);
-    #else
-    physicalMemory = memalign(sysconf(_SC_PAGE_SIZE), 8388608);
-    #endif
+    //#else
+    //physicalMemory = memalign(getpagesize(), 8388608);
+    //#endif
     
     printf("Physical memory starts from %p\n",physicalMemory);
     //printf("pagesizee is %d\n",getpagesize());
     //struct PTRow *ptr = physicalMemory;
     int count = 0;
     remainingFreeFrames = TotalPages;
-    for (int i = 0; i<TotalPagesUsedByPTRows; i++) {
+    int i;
+    for (i = 0; i<TotalPagesUsedByPTRows; i++) {
         
         struct PTRow *ptr = (struct PTRow*)(physicalMemory+i*BytesPerPage);
-        for (int j =0; j<PTRowsPerPage; j++) {
+        int j;
+        for (j =0; j<PTRowsPerPage; j++) {
             ptr += j*(sizeof(struct PTRow));
             ptr->isAllocated = 0;
             ptr->PageNum = count++;
@@ -86,10 +98,11 @@ struct PTRow* allocateNextFreeFrame(int ThreadID){
     
     int lastThreadBlockNumber = getLastThreadBlockNumber(ThreadID);
     struct PTRow* retVal = NULL;
-    
-    for (int i = 0; i<TotalPagesUsedByPTRows; i++) {
+    int i;
+    for (i = 0; i<TotalPagesUsedByPTRows; i++) {
         struct PTRow *ptr = (struct PTRow*)(physicalMemory+i*BytesPerPage);
-        for (int j =0; j<PTRowsPerPage; j++) {
+        int j;
+        for (j =0; j<PTRowsPerPage; j++) {
             ptr += j*(sizeof(struct PTRow));
             
             if(ptr->isAllocated == 0){
@@ -109,10 +122,12 @@ struct PTRow* allocateNextFreeFrame(int ThreadID){
 int getLastThreadBlockNumber(int ThreadID){
     int retVal = -1;
     
-    for (int i = 0; i<TotalPagesUsedByPTRows; i++) {
+    int i;
+    for (i = 0; i<TotalPagesUsedByPTRows; i++) {
         
         struct PTRow *ptr = (struct PTRow*)(physicalMemory+i*BytesPerPage);
-        for (int j =0; j<PTRowsPerPage; j++) {
+        int j;
+        for (j =0; j<PTRowsPerPage; j++) {
             ptr += j*(sizeof(struct PTRow));
             
             if(ptr->isAllocated == 1 && ptr->threadID == ThreadID){

@@ -16,9 +16,11 @@ int main(int argc, const char * argv[]) {
     initMemoryStructures();
     
     char* test = myallocate(3, "test ", "test" , 1);
+    printf("Line a\n");
     *(test) = 'a';
     *(test+1) = 'b';
     *(test+2) = 'c';
+    printf("Line b\n");
     printf("%c%c%c\n",*(test),*(test+1),*(test+2));
     
     char* pm = getPhyMem();
