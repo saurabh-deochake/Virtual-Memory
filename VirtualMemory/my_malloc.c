@@ -19,7 +19,9 @@ struct PTRow {
     int threadID;
     int threadBlockNumber;
     int PageNum;
+    int endOffset;
 };
+
 
 const int TotalPages = 2048;
 const int BytesPerPage = 4096;
@@ -49,6 +51,7 @@ void initMemoryStructures(){
     //#endif
     
     printf("Physical memory starts from %p\n",physicalMemory);
+    printf("page memory starts from %p\n",physicalMemory+TotalPagesUsedByPTRows*BytesPerPage);
     //printf("pagesizee is %d\n",getpagesize());
     //struct PTRow *ptr = physicalMemory;
     int count = 0;
@@ -62,11 +65,12 @@ void initMemoryStructures(){
             ptr += j*(sizeof(struct PTRow));
             ptr->isAllocated = 0;
             ptr->PageNum = count++;
+            ptr->endOffset = -1;
         }
         
     }
     
-    mprotect( physicalMemory, 4096, PROT_NONE);
+    //mprotect( physicalMemory, 4096, PROT_NONE);
     
     struct sigaction sa;
     sa.sa_flags = SA_SIGINFO;
@@ -92,9 +96,10 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
     
     
     
-    int size = numberOfBytes/4096 + 1;
+    int numberOfPagesRequested = numberOfBytes/4096 + 1;
+    int size =  numberOfBytes;
     
-    if(size > remainingFreeFrames){
+    if(numberOfPagesRequested > remainingFreeFrames){
         return NULL;
     }
     
@@ -104,48 +109,88 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
     void* pagePointer = NULL;
     
     while (size > 0) {
-        ptr = allocateNextFreeFrame(ThreadReq);
+        int sizeBeforeAllocation = size;
+        int oldOffset = -1;
+        ptr = allocateNextFreeFrame(ThreadReq,&size,&oldOffset);
         
         if(firstFrameFound == -1) {
-            //pagePointer = getPagePointerFromNumber(ptr->PageNum);
             startPtr = ptr;
             firstFrameFound = 1;
+            
+            //if(ptr->endOffset== -1){
+            //    pagePointer = getPagePointerFromNumber(startPtr->PageNum);
+            //}
+            //else if (ptr->endOffset != -1){
+                pagePointer = getPagePointerFromNumber(startPtr->PageNum);
+                pagePointer += oldOffset + 1;
+            //}
         }
         
-        size--;
     }
-    pagePointer = getPagePointerFromThreadBlockNumber(startPtr->threadBlockNumber);
+    //pagePointer = getPagePointerFromThreadBlockNumber(startPtr->threadBlockNumber);
     return pagePointer;
 }
 
 
-struct PTRow* allocateNextFreeFrame(int ThreadID){
+struct PTRow* allocateNextFreeFrame(int ThreadID,int *numberOfBytes,int *oldOffset){
     
-    int lastThreadBlockNumber = getLastThreadBlockNumber(ThreadID);
+    struct PTRow* lastThreadMemoryPTRow = getLastThreadMemoryPTRow(ThreadID);
     struct PTRow* retVal = NULL;
     int i;
-    for (i = 0; i<TotalPagesUsedByPTRows; i++) {
-        struct PTRow *ptr = (struct PTRow*)(physicalMemory+i*BytesPerPage);
-        int j;
-        for (j =0; j<PTRowsPerPage; j++) {
-            ptr += j*(sizeof(struct PTRow));
+    
+    if(lastThreadMemoryPTRow != NULL && lastThreadMemoryPTRow->endOffset != -1){
+        int spaceLeftInPage = BytesPerPage - lastThreadMemoryPTRow->endOffset - 1;
+        *oldOffset = lastThreadMemoryPTRow->endOffset;
+        if(*numberOfBytes >= spaceLeftInPage){
+            *numberOfBytes -= spaceLeftInPage;
+            lastThreadMemoryPTRow->endOffset = -1;
+        }
+        else{
+            lastThreadMemoryPTRow->endOffset += *numberOfBytes;
+            *numberOfBytes = 0;
+        }
+        retVal = lastThreadMemoryPTRow;
+        return retVal;
+    }
+    else{
+        for (i = 0; i<TotalPagesUsedByPTRows; i++) {
+            struct PTRow *ptr = (struct PTRow*)(physicalMemory+i*BytesPerPage);
+            int j;
+            for (j =0; j<PTRowsPerPage; j++) {
+                ptr += j*(sizeof(struct PTRow));
             
-            if(ptr->isAllocated == 0){
-                ptr->isAllocated = 1;
-                ptr->threadID = ThreadID;
-                ptr->threadBlockNumber = ++lastThreadBlockNumber;
-                retVal = ptr;
-                remainingFreeFrames--;
-                return retVal;
+                if(ptr->isAllocated == 0){
+                    ptr->isAllocated = 1;
+                    ptr->threadID = ThreadID;
+                    
+                    if(lastThreadMemoryPTRow!=NULL) {
+                        ptr->threadBlockNumber = (lastThreadMemoryPTRow->threadBlockNumber)+1;
+                    }
+                    else{
+                        ptr->threadBlockNumber = 0;
+                    }
+                    *oldOffset = ptr->endOffset;
+                    if(*numberOfBytes >= BytesPerPage){
+                        ptr->endOffset = -1;
+                        *numberOfBytes -= BytesPerPage;
+                    }
+                    else{
+                        ptr->endOffset += *numberOfBytes;
+                        *numberOfBytes = 0;
+                    }
+                    
+                    retVal = ptr;
+                    remainingFreeFrames--;
+                    return retVal;
+                }
             }
         }
     }
-    
     return retVal;
 }
 
-int getLastThreadBlockNumber(int ThreadID){
-    int retVal = -1;
+struct PTRow* getLastThreadMemoryPTRow(int ThreadID){
+    struct PTRow* retVal = NULL;
     
     int i;
     for (i = 0; i<TotalPagesUsedByPTRows; i++) {
@@ -156,8 +201,8 @@ int getLastThreadBlockNumber(int ThreadID){
             ptr += j*(sizeof(struct PTRow));
             
             if(ptr->isAllocated == 1 && ptr->threadID == ThreadID){
-                if(retVal < ptr->threadBlockNumber){
-                    retVal = ptr->threadBlockNumber;
+                if(retVal==NULL || (retVal->threadBlockNumber < ptr->threadBlockNumber)){
+                    retVal = ptr;
                 }
             }
             
@@ -176,9 +221,9 @@ struct PTRow* getMappedPTRow(int PageNumber){
     return retVal;
 }
 
-void* getPagePointerFromNumber(int pageNumber){
+void* getPagePointerFromNumber(int pageNumberOfPTRow){
     
-    void* page = physicalMemory+(TotalPagesUsedByPTRows + pageNumber)*BytesPerPage;
+    void* page = physicalMemory+(TotalPagesUsedByPTRows + pageNumberOfPTRow)*BytesPerPage;
     //printf("Page pointer allocated is: %x",page);
     return page;
 }

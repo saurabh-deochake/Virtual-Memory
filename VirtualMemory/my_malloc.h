@@ -25,9 +25,9 @@ static void handler(int sig, siginfo_t *si, void *unused);
 
 void* myallocate(int size,char* fileName,char* lineNumber,int ThreadReq);
 
-struct PTRow* allocateNextFreeFrame(int ThreadID);
+struct PTRow* allocateNextFreeFrame(int ThreadID,int *numberOfBytes,int *oldOffset);
 
-int getLastThreadBlockNumber(int ThreadID);
+struct PTRow* getLastThreadMemoryPTRow(int ThreadID);
 
 struct PTRow* getMappedPTRow(int PageNumber);
 
