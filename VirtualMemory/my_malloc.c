@@ -262,7 +262,7 @@ void swapPagesAndPTRows(int pageNum1,int pageNum2){
     PR2->isAllocated = tempInt;
     
 }
-
+ 
 
 static void handler(int sig, siginfo_t *si, void *unused) {
     printf("Got SIGSEGV at address: 0x%lx\n",(long) si->si_addr);

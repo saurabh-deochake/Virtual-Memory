@@ -16,8 +16,7 @@
 
 extern int GthreadID;
 
-//const int TotalBytesUsedByPTRows = 2048 * sizeof(struct PTRow);
-//const int OffsetToFirstUsablePage = TotalBytesUsedByPTRows;
+
 
 void initMemoryStructures();
 

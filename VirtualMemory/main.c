@@ -12,9 +12,7 @@
 
 
 int main(int argc, const char * argv[]) {
-    // insert code here...
-    printf("Hello, World!\n");
-    
+
     initMemoryStructures();
     mprotectFunc(getPhyMem(),8388608,PROT_NONE);
     char* test = myallocate(4099, "test ", "test" , 1);
