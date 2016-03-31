@@ -146,10 +146,10 @@ struct PTRow* allocateNextFreeFrame(int ThreadID,int *numberOfBytes,int *oldOffs
     }
     else{
         for (i = 0; i<TotalPagesUsedByPTRows; i++) {
-            struct PTRow *ptr = (struct PTRow*)(physicalMemory+i*BytesPerPage);
+            char* ptrOut = (char*)(physicalMemory+i*BytesPerPage);
             int j;
             for (j =0; j<PTRowsPerPage; j++) {
-                ptr += j*(sizeof(struct PTRow));
+                struct PTRow* ptr = (struct PTRow*)(ptrOut + j*(sizeof(struct PTRow)));
             
                 if(ptr->isAllocated == 0){
                     ptr->isAllocated = 1;
@@ -187,10 +187,10 @@ struct PTRow* getLastThreadMemoryPTRow(int ThreadID){
     int i;
     for (i = 0; i<TotalPagesUsedByPTRows; i++) {
         
-        struct PTRow *ptr = (struct PTRow*)(physicalMemory+i*BytesPerPage);
+        char* ptrOut = (char*)(physicalMemory+i*BytesPerPage);
         int j;
         for (j =0; j<PTRowsPerPage; j++) {
-            ptr += j*(sizeof(struct PTRow));
+            struct PTRow* ptr = (struct PTRow*)(ptrOut + j*(sizeof(struct PTRow)));
             
             if(ptr->isAllocated == 1 && ptr->threadID == ThreadID){
                 if(retVal==NULL || (retVal->threadBlockNumber < ptr->threadBlockNumber)){

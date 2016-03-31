@@ -23,6 +23,14 @@ int main(int argc, const char * argv[]) {
     //printf("Line b\n");
     printf("test is:%p %c%c%c\n",test,*(test),*(test+1),*(test+2));
     
+    test = myallocate(4093, "test ", "test" , 1);
+    //printf("test is:%p\n",test);
+    *(test) = 'd';
+    *(test+1) = 'e';
+    *(test+2) = 'f';
+    //printf("Line b\n");
+    printf("test is:%p %c%c%c\n",test,*(test),*(test+1),*(test+2));
+    
     test = myallocate(3, "test ", "test" , 1);
     //printf("test is:%p\n",test);
     *(test) = 'd';
