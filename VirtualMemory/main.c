@@ -44,12 +44,15 @@ int main(int argc, const char * argv[]) {
     printf("test is:%p %c%c%c\n",test,*(test),*(test+1),*(test+2));*/
     
     char* test2 = myallocate(3, "test ", "test" , 2);
-    GthreadID = 1;
     mprotectFunc(getPhyMem(),8388608,PROT_NONE);
+    GthreadID = 2;
     *(test2) = 't';
     *(test2+1) = 'u';
     *(test2+2) = 'v';
     //printf("Line b\n");
+    
+    mprotectFunc(getPhyMem(),8388608,PROT_NONE);
+    GthreadID = 1;
     printf("test is:%p %c%c%c\n",test2,*(test2),*(test2+1),*(test2+2));
     //char* pm = getPhyMem();
     //int temp = getByteAdditionsForNthPage(0);
