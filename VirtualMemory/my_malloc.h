@@ -14,14 +14,12 @@
 
 #endif
 
-
+extern int GthreadID;
 
 //const int TotalBytesUsedByPTRows = 2048 * sizeof(struct PTRow);
 //const int OffsetToFirstUsablePage = TotalBytesUsedByPTRows;
 
 void initMemoryStructures();
-
-static void handler(int sig, siginfo_t *si, void *unused);
 
 void* myallocate(int size,char* fileName,char* lineNumber,int ThreadReq);
 
@@ -37,12 +35,14 @@ void swapPagesAndPTRows(int pageNum1,int pageNum2);
 
 static void handler(int sig, siginfo_t *si, void *unused);
 
+void mprotectFunc(void *addr, size_t len, int prot);
+
 //int getByteAdditionsForNthPage();
 
 //int* mydeallocate(int size,char* fileName,char* lineNumber,int ThreadReq)
 
 
-//char* getPhyMem();
+char* getPhyMem();
 
 
 

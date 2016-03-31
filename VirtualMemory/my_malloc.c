@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 
+
+
 void* physicalMemoryVoidPointer;
 char* physicalMemory;//[8388608]; //memalign( sysconf(_SC_PAGE_SIZE), 8388608);
 //[8388608]; //8MB physical Memory
@@ -25,6 +27,7 @@ struct PTRow {
 
 const int TotalPages = 2048;
 const int BytesPerPage = 4096;
+int GthreadID = 0;
 
 int TotalPTRows;
 int PTRowsPerPage;
@@ -46,7 +49,7 @@ void initMemoryStructures(){
     //#ifdef __APPLE__
     //physicalMemory = malloc(8388608);
     //#else
-    posix_memalign(&physicalMemoryVoidPointer,4096, 8388608);
+    posix_memalign(&physicalMemoryVoidPointer,4096, TotalPages*BytesPerPage);
     physicalMemory = (char*)physicalMemoryVoidPointer;
     //#endif
     
@@ -72,7 +75,7 @@ void initMemoryStructures(){
         
     }
     
-    //mprotect( physicalMemory, 4096, PROT_NONE);
+    
     
     struct sigaction sa;
     sa.sa_flags = SA_SIGINFO;
@@ -85,6 +88,8 @@ void initMemoryStructures(){
         exit(EXIT_FAILURE);
     }
     
+    mprotect( physicalMemory, TotalPages*BytesPerPage, PROT_NONE);
+    
     //getMappedPTRow(50);
     
 }
@@ -94,6 +99,7 @@ void initMemoryStructures(){
 
 void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq){
     
+    mprotect( physicalMemory, 8388608, PROT_READ | PROT_WRITE);
     int numberOfPagesRequested = numberOfBytes/4096 + 1;
     int size =  numberOfBytes;
     
@@ -119,7 +125,7 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
         }
         
     }
-    
+    mprotect( physicalMemory, TotalPages*BytesPerPage, PROT_NONE);
     return pagePointer;
 }
 
@@ -223,7 +229,6 @@ void* getPagePointerFromNumber(int pageNumberOfPTRow){
 void swapPagesAndPTRows(int pageNum1,int pageNum2){
     
     char tempChar;
-    struct PTRow* tempPTR;
     
     char *PG1 = getPagePointerFromNumber(pageNum1);
     char *PG2 = getPagePointerFromNumber(pageNum2);
@@ -259,10 +264,48 @@ void swapPagesAndPTRows(int pageNum1,int pageNum2){
 }
 
 
-static void handler(int sig, siginfo_t *si, void *unused)
-{
+static void handler(int sig, siginfo_t *si, void *unused) {
     printf("Got SIGSEGV at address: 0x%lx\n",(long) si->si_addr);
-    exit(0);
+    mprotect(physicalMemory,BytesPerPage*TotalPages,PROT_READ | PROT_WRITE);
+    
+    int TID = GthreadID;
+    int tBlock = (int)(((char*)si->si_addr - (physicalMemory + TotalPagesUsedByPTRows*BytesPerPage)))/BytesPerPage;
+    
+    int flag = -1;
+    int i;
+    for (i = 0; i<TotalPagesUsedByPTRows; i++) {
+        
+        char* ptrOut = (char*)(physicalMemory+i*BytesPerPage);
+        int j;
+        for (j =0; j<PTRowsPerPage; j++) {
+            struct PTRow* ptr = (struct PTRow*)(ptrOut + j*(sizeof(struct PTRow)));
+            
+            if(ptr->isAllocated == 1 && ptr->threadID == TID && ptr->threadBlockNumber == tBlock){
+                //mprotect(getPagePointerFromNumber(tBlock),BytesPerPage,PROT_READ | PROT_WRITE);
+                //mprotect(getPagePointerFromNumber(ptr->PageNum),BytesPerPage,PROT_READ | PROT_WRITE);
+                swapPagesAndPTRows(ptr->PageNum,tBlock);
+                mprotect(physicalMemory,BytesPerPage*TotalPages,PROT_NONE);
+                mprotect(getPagePointerFromNumber(tBlock),BytesPerPage,PROT_READ | PROT_WRITE);
+                flag = 1;
+                break;
+            }
+            
+        }
+        if(flag == 1) break;
+    }
+    
+    if(flag!=1){
+        //printf("Got SIGSEGV at address: 0x%lx\n",(long) si->si_addr);
+        exit(0);
+    }
+    
+    
+    //printf("Got SIGSEGV at address: 0x%lx\n",(long) si->si_addr);
+    //exit(0);
+}
+
+void mprotectFunc(void *addr, size_t len, int prot){
+    mprotect(addr,len,prot);
 }
 
 
@@ -273,15 +316,10 @@ static void handler(int sig, siginfo_t *si, void *unused)
 
 
 
-
-
-
-
-/*
 char* getPhyMem(){
     return physicalMemory;
 }
-*/
+
 
 
 
