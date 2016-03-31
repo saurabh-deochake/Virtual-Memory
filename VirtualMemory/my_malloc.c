@@ -59,13 +59,15 @@ void initMemoryStructures(){
     int i;
     for (i = 0; i<TotalPagesUsedByPTRows; i++) {
         
-        struct PTRow *ptr = (struct PTRow*)(physicalMemory+i*BytesPerPage);
+        char* ptrOut = (char*)(physicalMemory+i*BytesPerPage);
         int j;
         for (j =0; j<PTRowsPerPage; j++) {
-            ptr += j*(sizeof(struct PTRow));
+            struct PTRow* ptr = (struct PTRow*)(ptrOut + j*(sizeof(struct PTRow)));
             ptr->isAllocated = 0;
             ptr->PageNum = count++;
             ptr->endOffset = -1;
+            //if(ptr->PageNum == 1)
+            //    printf("Current Pointer is : %p ::: %p\n",ptr,ptrOut);
         }
         
     }
@@ -83,18 +85,14 @@ void initMemoryStructures(){
         exit(EXIT_FAILURE);
     }
     
+    //getMappedPTRow(50);
+    
 }
 
-static void handler(int sig, siginfo_t *si, void *unused)
-{
-    printf("Got SIGSEGV at address: 0x%lx\n",(long) si->si_addr);
-    exit(0);
-}
+
 
 
 void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq){
-    
-    
     
     int numberOfPagesRequested = numberOfBytes/4096 + 1;
     int size =  numberOfBytes;
@@ -109,25 +107,19 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
     void* pagePointer = NULL;
     
     while (size > 0) {
-        int sizeBeforeAllocation = size;
         int oldOffset = -1;
         ptr = allocateNextFreeFrame(ThreadReq,&size,&oldOffset);
         
         if(firstFrameFound == -1) {
             startPtr = ptr;
             firstFrameFound = 1;
-            
-            //if(ptr->endOffset== -1){
-            //    pagePointer = getPagePointerFromNumber(startPtr->PageNum);
-            //}
-            //else if (ptr->endOffset != -1){
-                pagePointer = getPagePointerFromNumber(startPtr->PageNum);
-                pagePointer += oldOffset + 1;
-            //}
+            //pagePointer = getPagePointerFromNumber(startPtr->PageNum);
+            pagePointer = physicalMemory + (TotalPagesUsedByPTRows + startPtr->threadBlockNumber)*BytesPerPage;
+            pagePointer += oldOffset + 1;
         }
         
     }
-    //pagePointer = getPagePointerFromThreadBlockNumber(startPtr->threadBlockNumber);
+    
     return pagePointer;
 }
 
@@ -215,9 +207,8 @@ struct PTRow* getLastThreadMemoryPTRow(int ThreadID){
 }
 
 struct PTRow* getMappedPTRow(int PageNumber){
-    
-    struct PTRow* retVal;
-
+    struct PTRow* retVal = (struct PTRow*)(physicalMemory + (PageNumber/PTRowsPerPage)*BytesPerPage + (PageNumber%PTRowsPerPage)*sizeof(struct PTRow));
+    //printf("Returned ptrNum: %d\n",retVal->PageNum);
     return retVal;
 }
 
@@ -228,27 +219,69 @@ void* getPagePointerFromNumber(int pageNumberOfPTRow){
     return page;
 }
 
-int getByteAdditionsForNthPage(int i){
+
+void swapPagesAndPTRows(int pageNum1,int pageNum2){
+    
+    char tempChar;
+    struct PTRow* tempPTR;
+    
+    char *PG1 = getPagePointerFromNumber(pageNum1);
+    char *PG2 = getPagePointerFromNumber(pageNum2);
+    
+    struct PTRow* PR1 = getMappedPTRow(pageNum1);
+    struct PTRow* PR2 = getMappedPTRow(pageNum2);
+    
+    int i;
+    for(i = 0; i < BytesPerPage ; i++){
+        tempChar = *(PG1+i);
+        *(PG1+i) = *(PG2+i);
+        *(PG2+i) = tempChar;
+    }
+    
+    int tempInt;
+    
+    tempInt = PR1->endOffset;
+    PR1->endOffset = PR2->endOffset;
+    PR2->endOffset = tempInt;
+    
+    tempInt = PR1->threadBlockNumber;
+    PR1->threadBlockNumber = PR2->threadBlockNumber;
+    PR2->threadBlockNumber = tempInt;
+
+    tempInt = PR1->threadID;
+    PR1->threadID = PR2->threadID;
+    PR2->threadID = tempInt;
+    
+    tempInt = PR1->isAllocated;
+    PR1->isAllocated = PR2->isAllocated;
+    PR2->isAllocated = tempInt;
+    
+}
+
+
+static void handler(int sig, siginfo_t *si, void *unused)
+{
+    printf("Got SIGSEGV at address: 0x%lx\n",(long) si->si_addr);
+    exit(0);
+}
+
+
+/*int getByteAdditionsForNthPage(int i){
     return (TotalPagesUsedByPTRows + i)*BytesPerPage;
-}
-
-void* getPagePointerFromThreadBlockNumber(int threadBlockNumber){
-    void* pageP = physicalMemory + (TotalPagesUsedByPTRows + threadBlockNumber)*BytesPerPage;
-    return pageP;
-}
+}*/
 
 
 
 
+
+
+
+
+/*
 char* getPhyMem(){
     return physicalMemory;
 }
-
-
-
-
-
-
+*/
 
 
 

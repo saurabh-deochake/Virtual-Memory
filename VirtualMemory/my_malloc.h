@@ -33,10 +33,16 @@ struct PTRow* getMappedPTRow(int PageNumber);
 
 void* getPagePointerFromNumber(int pageNumber);
 
-int getByteAdditionsForNthPage();
+void swapPagesAndPTRows(int pageNum1,int pageNum2);
 
-void* getPagePointerFromThreadBlockNumber(int threadBlockNumber);
+static void handler(int sig, siginfo_t *si, void *unused);
+
+//int getByteAdditionsForNthPage();
+
 //int* mydeallocate(int size,char* fileName,char* lineNumber,int ThreadReq)
 
 
-char* getPhyMem();
+//char* getPhyMem();
+
+
+
