@@ -10,8 +10,6 @@
 #include <stdlib.h>
 #include <sys/mman.h>
 
-
-
 void* physicalMemoryVoidPointer;
 char* physicalMemory;//[8388608]; //memalign( sysconf(_SC_PAGE_SIZE), 8388608);
 //[8388608]; //8MB physical Memory
@@ -22,6 +20,7 @@ struct PTRow {
     int threadBlockNumber;
     int PageNum;
     int endOffset;
+    int allocCounter;
 };
 
 
@@ -34,7 +33,7 @@ int PTRowsPerPage;
 int TotalPagesUsedByPTRows;
 int TotalUsablePages;
 int remainingFreeFrames;
-
+int AllocationCounter = 0;
 
 
 void initMemoryStructures(){
@@ -69,12 +68,13 @@ void initMemoryStructures(){
             ptr->isAllocated = 0;
             ptr->PageNum = count++;
             ptr->endOffset = -1;
+            ptr->allocCounter = 0;
+            //printf("Alloc counter: %d\n\n", ptr->allocCounter);
             //if(ptr->PageNum == 1)
             //    printf("Current Pointer is : %p ::: %p\n",ptr,ptrOut);
         }
         
     }
-    
     
     
     struct sigaction sa;
@@ -115,13 +115,15 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
     while (size > 0) {
         int oldOffset = -1;
         ptr = allocateNextFreeFrame(ThreadReq,&size,&oldOffset);
-        
+        //ptr->allocCounter++;
+        //printf("Allocation count: %d\n", ptr->allocCounter);
         if(firstFrameFound == -1) {
             startPtr = ptr;
             firstFrameFound = 1;
             //pagePointer = getPagePointerFromNumber(startPtr->PageNum);
             pagePointer = physicalMemory + (TotalPagesUsedByPTRows + startPtr->threadBlockNumber)*BytesPerPage;
             pagePointer += oldOffset + 1;
+            //printf("Thread block num: %d\n\n", startPtr->threadBlockNumber);
         }
         
     }
@@ -129,6 +131,31 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
     return pagePointer;
 }
 
+int mydeallocate(void *freePtr, char *fileName, char *lineNumber, int ThreadID){
+    mprotect(physicalMemory, 8388608, PROT_READ | PROT_WRITE);
+    int i,j, count=0;
+    //printf("Free Pointer: %p\n", freePtr);
+    for (i = 0; i<TotalPagesUsedByPTRows; i++) {
+            char* ptrOut = (char*)(physicalMemory+i*BytesPerPage);
+            for (j =0; j<PTRowsPerPage; j++) {
+                struct PTRow* ptr = (struct PTRow*)(ptrOut + j*(sizeof(struct PTRow)));
+            
+                if(ptr-> threadID == ThreadID && ptr->isAllocated ==1 && ptr->allocCounter ==1){
+                                   
+                    remainingFreeFrames++;
+                    //printf("nFrames: %d\n", remainingFreeFrames);
+                    //printf("Offset: %d\n", ptr->endOffset);
+                    
+                      //  printf("reached 0\n");
+                        ptr -> isAllocated = 0;
+                    
+                }
+                
+            }
+    }
+    mprotect( physicalMemory, TotalPages*BytesPerPage, PROT_NONE);
+    return(EXIT_SUCCESS);
+}
 
 struct PTRow* allocateNextFreeFrame(int ThreadID,int *numberOfBytes,int *oldOffset){
     
@@ -160,10 +187,12 @@ struct PTRow* allocateNextFreeFrame(int ThreadID,int *numberOfBytes,int *oldOffs
                 if(ptr->isAllocated == 0){
                     ptr->isAllocated = 1;
                     ptr->threadID = ThreadID;
+                    ptr->allocCounter++;
                     
                     if(lastThreadMemoryPTRow!=NULL) {
                         ptr->threadBlockNumber = (lastThreadMemoryPTRow->threadBlockNumber)+1;
                     }
+                    
                     else{
                         ptr->threadBlockNumber = 0;
                     }
@@ -179,11 +208,13 @@ struct PTRow* allocateNextFreeFrame(int ThreadID,int *numberOfBytes,int *oldOffs
                     
                     retVal = ptr;
                     remainingFreeFrames--;
+                    
                     return retVal;
                 }
             }
         }
     }
+    
     return retVal;
 }
 
@@ -265,7 +296,7 @@ void swapPagesAndPTRows(int pageNum1,int pageNum2){
  
 
 static void handler(int sig, siginfo_t *si, void *unused) {
-    printf("Got SIGSEGV at address: 0x%lx\n",(long) si->si_addr);
+    //printf("Got SIGSEGV at address: 0x%lx\n",(long) si->si_addr);
     mprotect(physicalMemory,BytesPerPage*TotalPages,PROT_READ | PROT_WRITE);
     
     int TID = GthreadID;

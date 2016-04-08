@@ -25,6 +25,8 @@ int main(int argc, const char * argv[]) {
     //printf("Line b\n");
     printf("test is:%p %c%c%c\n",test,*(test),*(test+1),*(test+4098));
     
+    mydeallocate(test, "test", "test", 1);
+    //mydeallocate(test, "test", "test", 1);
     char* test1 = myallocate(4093, "test ", "test" , 1);
     GthreadID=1;
     mprotectFunc(getPhyMem(),8388608,PROT_NONE);
@@ -50,10 +52,11 @@ int main(int argc, const char * argv[]) {
     *(test2+1) = 'u';
     *(test2+2) = 'v';
     //printf("Line b\n");
-    
-    mprotectFunc(getPhyMem(),8388608,PROT_NONE);
-    GthreadID = 1;
     printf("test is:%p %c%c%c\n",test2,*(test2),*(test2+1),*(test2+2));
+    
+    //mprotectFunc(getPhyMem(),8388608,PROT_NONE);
+    //GthreadID = 1;
+    //printf("test is:%p %c%c%c\n",test2,*(test2),*(test2+1),*(test2+2));
     //char* pm = getPhyMem();
     //int temp = getByteAdditionsForNthPage(0);
     //printf("%c%c%c\n",*(pm+temp),*(pm+temp+1),*(pm+temp+2));

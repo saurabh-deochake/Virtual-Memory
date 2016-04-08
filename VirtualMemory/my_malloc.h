@@ -16,11 +16,11 @@
 
 extern int GthreadID;
 
-
-
 void initMemoryStructures();
 
 void* myallocate(int size,char* fileName,char* lineNumber,int ThreadReq);
+
+int mydeallocate(void *freePtr, char *fileName, char *lineNumber, int threadID);
 
 struct PTRow* allocateNextFreeFrame(int ThreadID,int *numberOfBytes,int *oldOffset);
 
