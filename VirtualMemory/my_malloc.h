@@ -22,6 +22,8 @@ void initMemoryStructures();
 
 void* myallocate(int size,char* fileName,char* lineNumber,int ThreadReq);
 
+int mydeallocate(void* address,char* fileName,char* lineNumber,int ThreadReq);
+
 struct PTRow* allocateNextFreeFrame(int ThreadID,int *numberOfBytes,int *oldOffset);
 
 struct PTRow* getLastThreadMemoryPTRow(int ThreadID);

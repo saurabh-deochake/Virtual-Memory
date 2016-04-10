@@ -52,7 +52,7 @@ int main(int argc, const char * argv[]) {
     //printf("Line b\n");
     
     mprotectFunc(getPhyMem(),8388608,PROT_NONE);
-    GthreadID = 1;
+    GthreadID = 2;
     printf("test is:%p %c%c%c\n",test2,*(test2),*(test2+1),*(test2+2));
     //char* pm = getPhyMem();
     //int temp = getByteAdditionsForNthPage(0);

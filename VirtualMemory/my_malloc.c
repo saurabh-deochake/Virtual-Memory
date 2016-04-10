@@ -27,6 +27,14 @@ struct PTRow {
     int threadBlockNumber;
     int PageNum;
     int endOffset;
+    int allocationCount;
+};
+
+struct allocationData {
+    int threadID;
+    int firstThreadBlockNumber;
+    int length;
+    int numberOfPages;
 };
 
 
@@ -86,6 +94,7 @@ void initMemoryStructures(){
             ptr->isAllocated = 0;
             ptr->PageNum = count++;
             ptr->endOffset = -1;
+            ptr->allocationCount = 0;
             
             //SWAP CODE - Extra Rows of PTRows that are present for the Physical Memory - make them unusable
             if (PageNumberOfFirstExtraPTRow < ptr->PageNum && ptr->PageNum < TotalPhysicalPages) {
@@ -123,7 +132,7 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
     
     mprotect( physicalMemory,TotalPhysicalPages*BytesPerPage, PROT_READ | PROT_WRITE);
     int numberOfPagesRequested = numberOfBytes/4096 + 1;
-    int size =  numberOfBytes;
+    int size =  numberOfBytes + sizeof(struct allocationData);
     
     if(numberOfPagesRequested > remainingFreeFrames){
         return NULL;
@@ -132,8 +141,8 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
     int firstFrameFound = -1;
     struct PTRow* ptr = NULL;
     struct PTRow* startPtr = NULL;
+    struct allocationData* allocDataPointer = NULL;
     void* pagePointer = NULL;
-    
     while (size > 0) {
         int oldOffset = -1;
         ptr = allocateNextFreeFrame(ThreadReq,&size,&oldOffset);
@@ -141,11 +150,16 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
         if(firstFrameFound == -1) {
             startPtr = ptr;
             firstFrameFound = 1;
-            //pagePointer = getPagePointerFromNumber(startPtr->PageNum);
-            //printf("Physical memory is: %p\n",physicalMemory);
-            //printf("startPtr memory is: %p\n",startPtr);
             pagePointer = physicalMemory + (TotalPagesUsedByPTRows + startPtr->threadBlockNumber)*BytesPerPage;
-            pagePointer += oldOffset + 1;
+            allocDataPointer = (struct allocationData*)(pagePointer + oldOffset + 1);
+            allocDataPointer->length = numberOfBytes;
+            allocDataPointer->threadID = ThreadReq;
+            allocDataPointer->numberOfPages = 1;
+            allocDataPointer->firstThreadBlockNumber = startPtr->threadBlockNumber;
+            pagePointer += oldOffset + 1 + sizeof(struct allocationData);
+        }
+        else{
+            allocDataPointer->numberOfPages++;
         }
         
     }
@@ -160,7 +174,8 @@ struct PTRow* allocateNextFreeFrame(int ThreadID,int *numberOfBytes,int *oldOffs
     struct PTRow* retVal = NULL;
     int i;
     
-    if(lastThreadMemoryPTRow != NULL && lastThreadMemoryPTRow->endOffset != -1){
+    if(lastThreadMemoryPTRow != NULL && lastThreadMemoryPTRow->endOffset != -1 && (BytesPerPage - lastThreadMemoryPTRow->endOffset - 1) > sizeof(struct allocationData)){
+        
         int spaceLeftInPage = BytesPerPage - lastThreadMemoryPTRow->endOffset - 1;
         *oldOffset = lastThreadMemoryPTRow->endOffset;
         if(*numberOfBytes >= spaceLeftInPage){
@@ -172,6 +187,7 @@ struct PTRow* allocateNextFreeFrame(int ThreadID,int *numberOfBytes,int *oldOffs
             *numberOfBytes = 0;
         }
         retVal = lastThreadMemoryPTRow;
+        retVal->allocationCount++;
         return retVal;
     }
     else{
@@ -203,12 +219,13 @@ struct PTRow* allocateNextFreeFrame(int ThreadID,int *numberOfBytes,int *oldOffs
                     //printf("returning: %p\n",ptr);
                     retVal = ptr;
                     remainingFreeFrames--;
+                    retVal->allocationCount++;
                     return retVal;
                 }
             }
         }
     }
-    
+    retVal->allocationCount++;
     return retVal;
 }
 
@@ -363,7 +380,57 @@ char* getPhyMem(){
 }
 
 
-
+int mydeallocate(void* address,char* fileName,char* lineNumber,int ThreadReq){
+    
+    struct allocationData* ad = (struct allocationData*)(address - sizeof(struct allocationData));
+    int numberOfBytesUsed = ad->length;    // will cause segfault
+    int numberOfBytesUsedIncludingAllocData = ad->length + sizeof(struct allocationData);
+    int numberOfPagesUsed = ad->numberOfPages;
+    int threadIDFromAllocData = ad->threadID;
+    int threadBlockNumberFromAllocData = ad->firstThreadBlockNumber;
+    
+    mprotect( physicalMemory,TotalPhysicalPages*BytesPerPage, PROT_READ | PROT_WRITE);
+    
+    //int tBlock = (int)(((char*)address - (physicalMemory + TotalPagesUsedByPTRows*BytesPerPage)))/BytesPerPage;
+    //int threadID = ThreadReq;
+    //int offset = (int)address%BytesPerPage;
+    //printf("Offset is: %d",offset);
+    struct PTRow* startPtr = NULL;
+    
+    int i,breakFlag=0;
+    
+    for (i = 0; i<TotalPagesUsedByPTRows; i++) {
+        
+        char* ptrOut = (char*)(physicalMemory+i*BytesPerPage);
+        int j;
+        for (j =0; j<PTRowsPerPage; j++) {
+            struct PTRow* ptr = (struct PTRow*)(ptrOut + j*(sizeof(struct PTRow)));
+            
+            if(ptr->threadID == threadIDFromAllocData && ptr->threadBlockNumber == threadBlockNumberFromAllocData){
+                startPtr = ptr;
+                breakFlag = 1;
+                break;
+            }
+        }
+        if(breakFlag == 1){
+            break;
+        }
+    }
+    
+    for(i = 0; i < numberOfPagesUsed ; i++){
+        struct PTRow* inPtr = startPtr + sizeof(struct PTRow)*i;
+        inPtr->allocationCount--;
+        if(inPtr->allocationCount == 0){
+            inPtr->isAllocated = 0;
+            inPtr->endOffset = -1;
+        }
+    }
+    
+    
+    mprotect( physicalMemory, TotalPhysicalPages*BytesPerPage, PROT_NONE);
+    
+    return 0;
+}
 
 
 
