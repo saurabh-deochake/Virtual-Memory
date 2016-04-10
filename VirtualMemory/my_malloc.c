@@ -16,6 +16,11 @@ void* physicalMemoryVoidPointer;
 char* physicalMemory;//[8388608]; //memalign( sysconf(_SC_PAGE_SIZE), 8388608);
 //[8388608]; //8MB physical Memory
 
+// SWAP FILE CODE
+
+FILE *swapFile, *swapMemoryPointer;
+
+
 struct PTRow {
     int isAllocated;
     int threadID;
@@ -25,38 +30,50 @@ struct PTRow {
 };
 
 
-const int TotalPages = 2048;
+const int TotalPhysicalPages = 2048;
 const int BytesPerPage = 4096;
+const int TotalSwPages = 4096; //SWAP CODE- No of Pages in Swap file
+
 int GthreadID = 0;
 
+int TotalPages;
 int TotalPTRows;
 int PTRowsPerPage;
 int TotalPagesUsedByPTRows;
 int TotalUsablePages;
 int remainingFreeFrames;
+int PageNumberOfFirstExtraPTRow;
 
 
 
 void initMemoryStructures(){
-    
-    TotalPTRows = TotalPages;
+    TotalPages = TotalPhysicalPages + TotalSwPages;
+    TotalPTRows = TotalPhysicalPages + TotalSwPages;
     PTRowsPerPage = (BytesPerPage / sizeof(struct PTRow));
     TotalPagesUsedByPTRows = TotalPTRows/PTRowsPerPage;
-    TotalUsablePages = TotalPages - TotalPagesUsedByPTRows;
-    remainingFreeFrames = TotalPages;
-    
+    TotalUsablePages = TotalPhysicalPages - TotalPagesUsedByPTRows;
+    //remainingFreeFrames = TotalPages;
+    //SWAP CODE- Made changes here it was = TotalPages
+    remainingFreeFrames = TotalUsablePages + TotalSwPages;
+    PageNumberOfFirstExtraPTRow = (TotalPhysicalPages - TotalPagesUsedByPTRows - 1);
+
     
     //#ifdef __APPLE__
     //physicalMemory = malloc(8388608);
     //#else
-    posix_memalign(&physicalMemoryVoidPointer,4096, TotalPages*BytesPerPage);
+    posix_memalign(&physicalMemoryVoidPointer,4096, TotalPhysicalPages*BytesPerPage);
     physicalMemory = (char*)physicalMemoryVoidPointer;
     //#endif
     
+    //SWAP CODE - New Swap file is defined with size 16MB
+    swapFile = fopen("swapfile","w+");// Create a file named swapfile with read and write permissions
+    ftruncate(fileno(swapFile), TotalSwPages*BytesPerPage); //Size of Swap File 16MB
+    fclose(swapFile);
+    swapMemoryPointer= swapFile;
+    
     printf("Physical memory starts from %p\n",physicalMemory);
     printf("page memory starts from %p\n",physicalMemory+TotalPagesUsedByPTRows*BytesPerPage);
-    //printf("pagesizee is %d\n",getpagesize());
-    //struct PTRow *ptr = physicalMemory;
+
     int count = 0;
     remainingFreeFrames = TotalPages;
     int i;
@@ -69,8 +86,13 @@ void initMemoryStructures(){
             ptr->isAllocated = 0;
             ptr->PageNum = count++;
             ptr->endOffset = -1;
-            //if(ptr->PageNum == 1)
-            //    printf("Current Pointer is : %p ::: %p\n",ptr,ptrOut);
+            
+            //SWAP CODE - Extra Rows of PTRows that are present for the Physical Memory - make them unusable
+            if (PageNumberOfFirstExtraPTRow < ptr->PageNum && ptr->PageNum < TotalPhysicalPages) {
+                ptr->isAllocated = 1;
+                ptr->threadID = -1000;
+            }
+            
         }
         
     }
@@ -88,7 +110,7 @@ void initMemoryStructures(){
         exit(EXIT_FAILURE);
     }
     
-    mprotect( physicalMemory, TotalPages*BytesPerPage, PROT_NONE);
+    mprotect( physicalMemory, TotalPhysicalPages*BytesPerPage, PROT_NONE);
     
     //getMappedPTRow(50);
     
@@ -99,7 +121,7 @@ void initMemoryStructures(){
 
 void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq){
     
-    mprotect( physicalMemory, 8388608, PROT_READ | PROT_WRITE);
+    mprotect( physicalMemory,TotalPhysicalPages*BytesPerPage, PROT_READ | PROT_WRITE);
     int numberOfPagesRequested = numberOfBytes/4096 + 1;
     int size =  numberOfBytes;
     
@@ -120,12 +142,14 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
             startPtr = ptr;
             firstFrameFound = 1;
             //pagePointer = getPagePointerFromNumber(startPtr->PageNum);
+            //printf("Physical memory is: %p\n",physicalMemory);
+            //printf("startPtr memory is: %p\n",startPtr);
             pagePointer = physicalMemory + (TotalPagesUsedByPTRows + startPtr->threadBlockNumber)*BytesPerPage;
             pagePointer += oldOffset + 1;
         }
         
     }
-    mprotect( physicalMemory, TotalPages*BytesPerPage, PROT_NONE);
+    mprotect( physicalMemory, TotalPhysicalPages*BytesPerPage, PROT_NONE);
     return pagePointer;
 }
 
@@ -156,7 +180,7 @@ struct PTRow* allocateNextFreeFrame(int ThreadID,int *numberOfBytes,int *oldOffs
             int j;
             for (j =0; j<PTRowsPerPage; j++) {
                 struct PTRow* ptr = (struct PTRow*)(ptrOut + j*(sizeof(struct PTRow)));
-            
+                //printf("Reading PageTableRow number: %d, %d\n",ptr->PageNum,ptr->isAllocated);
                 if(ptr->isAllocated == 0){
                     ptr->isAllocated = 1;
                     ptr->threadID = ThreadID;
@@ -176,7 +200,7 @@ struct PTRow* allocateNextFreeFrame(int ThreadID,int *numberOfBytes,int *oldOffs
                         ptr->endOffset += *numberOfBytes;
                         *numberOfBytes = 0;
                     }
-                    
+                    //printf("returning: %p\n",ptr);
                     retVal = ptr;
                     remainingFreeFrames--;
                     return retVal;
@@ -184,6 +208,7 @@ struct PTRow* allocateNextFreeFrame(int ThreadID,int *numberOfBytes,int *oldOffs
             }
         }
     }
+    
     return retVal;
 }
 
@@ -227,20 +252,35 @@ void* getPagePointerFromNumber(int pageNumberOfPTRow){
 
 
 void swapPagesAndPTRows(int pageNum1,int pageNum2){
-    
-    char tempChar;
-    
-    char *PG1 = getPagePointerFromNumber(pageNum1);
-    char *PG2 = getPagePointerFromNumber(pageNum2);
-    
     struct PTRow* PR1 = getMappedPTRow(pageNum1);
     struct PTRow* PR2 = getMappedPTRow(pageNum2);
-    
+    char tempChar;
     int i;
-    for(i = 0; i < BytesPerPage ; i++){
-        tempChar = *(PG1+i);
-        *(PG1+i) = *(PG2+i);
-        *(PG2+i) = tempChar;
+    if (pageNum1 < TotalPhysicalPages) {
+        
+        char *PG1 = getPagePointerFromNumber(pageNum1);
+        char *PG2 = getPagePointerFromNumber(pageNum2);
+        
+        for(i = 0; i < BytesPerPage ; i++){
+            tempChar = *(PG1+i);
+            *(PG1+i) = *(PG2+i);
+            *(PG2+i) = tempChar;
+        }
+    }
+    else {
+        printf("Swapping page!\n");
+        swapFile = fopen("swapfile","w+");
+        int pageNum1New = pageNum1 - TotalPhysicalPages;
+        char *PG2 = getPagePointerFromNumber(pageNum2);
+        
+        for (i = 0; i < BytesPerPage; i++) {
+            fseek(swapFile, pageNum1New*BytesPerPage+i, SEEK_SET); //fseek to location of the page
+            fread(&tempChar, 1, 1, swapFile);
+            fwrite((PG2+i), 1, 1, swapFile);
+            *(PG2+i) = tempChar;
+        }
+        
+        fclose(swapFile);
     }
     
     int tempInt;
@@ -266,7 +306,7 @@ void swapPagesAndPTRows(int pageNum1,int pageNum2){
 
 static void handler(int sig, siginfo_t *si, void *unused) {
     printf("Got SIGSEGV at address: 0x%lx\n",(long) si->si_addr);
-    mprotect(physicalMemory,BytesPerPage*TotalPages,PROT_READ | PROT_WRITE);
+    mprotect(physicalMemory,BytesPerPage*TotalPhysicalPages,PROT_READ | PROT_WRITE);
     
     int TID = GthreadID;
     int tBlock = (int)(((char*)si->si_addr - (physicalMemory + TotalPagesUsedByPTRows*BytesPerPage)))/BytesPerPage;
@@ -279,17 +319,19 @@ static void handler(int sig, siginfo_t *si, void *unused) {
         int j;
         for (j =0; j<PTRowsPerPage; j++) {
             struct PTRow* ptr = (struct PTRow*)(ptrOut + j*(sizeof(struct PTRow)));
-            
+            //printf("i is %d,j is %d, ptr is %d,%d\n",i,j,ptr->threadID,ptr->PageNum);
             if(ptr->isAllocated == 1 && ptr->threadID == TID && ptr->threadBlockNumber == tBlock){
                 //mprotect(getPagePointerFromNumber(tBlock),BytesPerPage,PROT_READ | PROT_WRITE);
                 //mprotect(getPagePointerFromNumber(ptr->PageNum),BytesPerPage,PROT_READ | PROT_WRITE);
+                //printf("BSwap?\n");
                 swapPagesAndPTRows(ptr->PageNum,tBlock);
-                mprotect(physicalMemory,BytesPerPage*TotalPages,PROT_NONE);
+                //printf("A or B?\n");
+                mprotect(physicalMemory,BytesPerPage*TotalPhysicalPages,PROT_NONE);
                 mprotect(getPagePointerFromNumber(tBlock),BytesPerPage,PROT_READ | PROT_WRITE);
                 flag = 1;
                 break;
             }
-            
+            //printf("i is %d,j is %d, ptr is %d,%d\n",i,j,ptr->threadID,ptr->threadBlockNumber);
         }
         if(flag == 1) break;
     }

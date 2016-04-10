@@ -15,7 +15,7 @@ int main(int argc, const char * argv[]) {
 
     initMemoryStructures();
     mprotectFunc(getPhyMem(),8388608,PROT_NONE);
-    char* test = myallocate(4099, "test ", "test" , 1);
+    char* test = myallocate(4388600, "test ", "test" , 1);
     //printf("Line a\n");
     GthreadID=1;
     *(test) = 'a';
@@ -25,7 +25,7 @@ int main(int argc, const char * argv[]) {
     //printf("Line b\n");
     printf("test is:%p %c%c%c\n",test,*(test),*(test+1),*(test+4098));
     
-    char* test1 = myallocate(4093, "test ", "test" , 1);
+    char* test1 = myallocate(4388600, "test ", "test" , 1);
     GthreadID=1;
     mprotectFunc(getPhyMem(),8388608,PROT_NONE);
     //printf("test is:%p\n",test);
