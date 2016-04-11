@@ -9,6 +9,9 @@
 /* Begin PBXBuildFile section */
 		620C4F4C1CAABEB600FC2604 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 620C4F4B1CAABEB600FC2604 /* main.c */; };
 		620C4F541CAAC38100FC2604 /* my_malloc.c in Sources */ = {isa = PBXBuildFile; fileRef = 620C4F521CAAC38100FC2604 /* my_malloc.c */; };
+		62B5A1411CBC4094008E023A /* my_pthread_t.c in Sources */ = {isa = PBXBuildFile; fileRef = 62B5A13D1CBC4094008E023A /* my_pthread_t.c */; };
+		62B5A1421CBC4094008E023A /* my_queue.c in Sources */ = {isa = PBXBuildFile; fileRef = 62B5A13F1CBC4094008E023A /* my_queue.c */; };
+		62B5A1441CBC4936008E023A /* makefile in Sources */ = {isa = PBXBuildFile; fileRef = 62B5A1431CBC4936008E023A /* makefile */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,6 +31,11 @@
 		620C4F4B1CAABEB600FC2604 /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
 		620C4F521CAAC38100FC2604 /* my_malloc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = my_malloc.c; sourceTree = "<group>"; };
 		620C4F531CAAC38100FC2604 /* my_malloc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = my_malloc.h; sourceTree = "<group>"; };
+		62B5A13D1CBC4094008E023A /* my_pthread_t.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = my_pthread_t.c; sourceTree = "<group>"; };
+		62B5A13E1CBC4094008E023A /* my_pthread_t.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = my_pthread_t.h; sourceTree = "<group>"; };
+		62B5A13F1CBC4094008E023A /* my_queue.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = my_queue.c; sourceTree = "<group>"; };
+		62B5A1401CBC4094008E023A /* my_queue.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = my_queue.h; sourceTree = "<group>"; };
+		62B5A1431CBC4936008E023A /* makefile */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.make; path = makefile; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -60,9 +68,14 @@
 		620C4F4A1CAABEB600FC2604 /* VirtualMemory */ = {
 			isa = PBXGroup;
 			children = (
+				62B5A13D1CBC4094008E023A /* my_pthread_t.c */,
+				62B5A13E1CBC4094008E023A /* my_pthread_t.h */,
+				62B5A13F1CBC4094008E023A /* my_queue.c */,
+				62B5A1401CBC4094008E023A /* my_queue.h */,
 				620C4F4B1CAABEB600FC2604 /* main.c */,
 				620C4F521CAAC38100FC2604 /* my_malloc.c */,
 				620C4F531CAAC38100FC2604 /* my_malloc.h */,
+				62B5A1431CBC4936008E023A /* makefile */,
 			);
 			path = VirtualMemory;
 			sourceTree = "<group>";
@@ -124,7 +137,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				620C4F4C1CAABEB600FC2604 /* main.c in Sources */,
+				62B5A1421CBC4094008E023A /* my_queue.c in Sources */,
 				620C4F541CAAC38100FC2604 /* my_malloc.c in Sources */,
+				62B5A1411CBC4094008E023A /* my_pthread_t.c in Sources */,
+				62B5A1441CBC4936008E023A /* makefile in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

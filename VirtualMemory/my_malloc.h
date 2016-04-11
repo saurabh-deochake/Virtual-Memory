@@ -36,7 +36,7 @@ void swapPagesAndPTRows(int pageNum1,int pageNum2);
 
 static void handler(int sig, siginfo_t *si, void *unused);
 
-void mprotectFunc(void *addr, size_t len, int prot);
+void mprotectFunc();
 
 //int getByteAdditionsForNthPage();
 
