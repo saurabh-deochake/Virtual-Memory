@@ -20,12 +20,21 @@ my_pthread_mutex_t mutex;
 void threadfunc1(){
     //my_pthread_mutex_lock(&mutex);
     int i;
+    
+    int numb = sizeof(char)*6194304;
+    char* test = malloc(numb);
+    *(test) = 'd';
+    *(test+1) = 'e';
+    *(test+2) = 'f';
+    *(test+4000000) = 'm';
+    
     for(i = 0; i < 8 ; i++){
         sleep(1);
-        printf("ThreadFunc1\n");}
+        printf("Thread1: test is: %c\n",*(test+i%3));
+        printf("Thread1S: test is: %c\n",*(test+4000000));
     //my_pthread_mutex_unlock(&mutex);
+    }
 }
-
 /* Name:     threadfunc2
  * Input:    None
  * Output:   None returned
@@ -35,21 +44,19 @@ void threadfunc2(){
     //my_pthread_mutex_lock(&mutex);
     int i;
     
-    //char* test = malloc(4);//myallocate(4, "test ", "test" ,THREADREQ);
-    //*(test) = 'a';
-    //*(test+1) = 'b';
-    //*(test+2) = 'c';
-    //printf("test is:%p %c%c%c\n",test,*(test),*(test+1),*(test+2));
-    //free(test);//mydeallocate(test, "test", "test", GthreadID);
-
-    int numb = sizeof(char);
-    char* yaw = (char*)malloc(numb);
-    *yaw = 'a';
-    free(yaw);
+    int numb = sizeof(char)*4194304;
+    char* test = malloc(numb);
+    *(test) = 'a';
+    *(test+1) = 'b';
+    *(test+2) = 'c';
+    *(test+4000000) = 'n';
+    //free(yaw);
     for(i = 0; i < 6 ; i++){
         sleep(1);
-        printf("ThreadFunc2\n");
+        printf("Thread2: test is: %c\n",*(test+i%3));
+        printf("Thread2: test is: %c\n",*(test+4000000));
     }
+    //free(test);
     //my_pthread_mutex_unlock(&mutex);
 }
 
@@ -59,12 +66,12 @@ void threadfunc2(){
  * Function: Print a statement for certain amount of times
  **/
 void threadfunc3(){
-    //my_pthread_mutex_lock(&mutex);
+    my_pthread_mutex_lock(&mutex);
     int i;
     
     for(i = 0; i < 2 ; i++){
         sleep(1);
-        printf("ThreadFunc3\n");
+        printf("Thread3\n");
         
     }
     for(i = 0; i < 4 ; i++){
@@ -73,7 +80,7 @@ void threadfunc3(){
         printf("POST YIELD: ThreadFunc3\n");
         //my_pthread_exit(NULL);
     }
-    //my_pthread_mutex_unlock(&mutex);
+    my_pthread_mutex_unlock(&mutex);
 }
 
 
@@ -113,47 +120,6 @@ int main(int argc, const char * argv[]) {
     printf("Ending main!\n");
     
     
-    //initMemoryStructures();
-    //mprotectFunc();
-    //GthreadID=THREADREQ;
-    /*char* test = malloc(4);//myallocate(4, "test ", "test" ,THREADREQ);
-    *(test) = 'a';
-    *(test+1) = 'b';
-    *(test+2) = 'c';
-    printf("test is:%p %c%c%c\n",test,*(test),*(test+1),*(test+2));
-    free(test);//mydeallocate(test, "test", "test", GthreadID);
-    //GthreadID=THREADREQ;
-    char* test1 = malloc(4);//myallocate(4, "test ", "test" , THREADREQ);
-    mprotectFunc();
-    *(test1) = 'd';
-    *(test1+1) = 'e';
-    *(test1+2) = 'f';
-    printf("test is:%p %c%c%c\n",test1,*(test1),*(test1+1),*(test1+2));
-     */
-    
-    /*test = myallocate(4, "test ", "test" , 1);
-    //printf("test is:%p\n",test);
-    *(test) = 'd';
-    *(test+1) = 'e';
-    *(test+2) = 'f';
-    //printf("Line b\n");
-    printf("test is:%p %c%c%c\n",test,*(test),*(test+1),*(test+2));*/
-    
-    /*char* test2 = myallocate(3, "test ", "test" , 2);
-    mprotectFunc(getPhyMem(),8388608,PROT_NONE);
-    GthreadID = 2;
-    *(test2) = 't';
-    *(test2+1) = 'u';
-    *(test2+2) = 'v';
-    //printf("Line b\n");
-    
-    mprotectFunc(getPhyMem(),8388608,PROT_NONE);
-    GthreadID = 2;
-    printf("test is:%p %c%c%c\n",test2,*(test2),*(test2+1),*(test2+2));*/
-    //char* pm = getPhyMem();
-    //int temp = getByteAdditionsForNthPage(0);
-    //printf("%c%c%c\n",*(pm+temp),*(pm+temp+1),*(pm+temp+2));
-    //printf("test is %p, and pm+temp is %p\n",test,pm+temp);
     
     return 0;
 }

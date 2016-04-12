@@ -118,11 +118,9 @@ void my_pthread_yield(){
  *           on specific alarms change the context of threads.
  **/
 void scheduler(){
-    printf("in scheduler\n");
     
     if((currentThread!= 0 && currentThread->isFinished == 1) || endThread == 1){
         endThread = 0;
-        //printf("Cleaning thread with id %d\n",currentThread->id);
         //Clean up the threads
         my_pthread_t *temp;
         removeElementFromQueue(&queue[currentQueue],&temp);
@@ -177,11 +175,10 @@ void scheduler(){
         //printf("QA is 1000\n");
         quantumAllocation = 1000;
     }
-    //printf("Q.A. for thread%d is %ld\n bcause timeSpnt is %ld\n",currentThread->id,quantumAllocation,currentThread->timeSpent);
+    
     inMainThread = 0;
     signal(SIGALRM, changeContext); //Change context on SIGALRM
     currentThread->startTimestamp = getCurrentTimestamp();
-    //alarm(quantumAllocation);
     
     THREADREQ = currentThread->id;
     mprotectFunc();
@@ -208,9 +205,6 @@ void changeContext(int signum){
  *           Create a context for created thread and return on success.
  **/
 int my_pthread_create(my_pthread_t * thread, void * attr, void (*function)(void), void * arg){
-    //printf("start creation!\n");
-    //if(nextQueueIndex == MAX_THREAD_COUNT) return THREAD_POOL_SATURATED_RETURN_VALUE;
-    // Set values to some thread state related stuff
     
     currentQueue = 0;
 
