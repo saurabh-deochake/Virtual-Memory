@@ -20,6 +20,8 @@ char* physicalMemory;//[8388608]; //memalign( sysconf(_SC_PAGE_SIZE), 8388608);
 
 FILE *swapFile, *swapMemoryPointer;
 int hasInitMemoryStructures = -1;
+int inDealloc = 0;
+int inAlloc = 0;
 
 struct PTRow {
     int isAllocated;
@@ -115,6 +117,7 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
     
 
     setAlarm(0,0);
+    inAlloc = 1;
     
     mprotect( physicalMemory,TotalPhysicalPages*BytesPerPage, PROT_READ | PROT_WRITE);
     int numberOfPagesRequested = numberOfBytes/4096 + 1;
@@ -140,14 +143,11 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
             firstFrameFound = 1;
             pagePointer = physicalMemory + (TotalPagesUsedByPTRows + startPtr->threadBlockNumber)*BytesPerPage;
             pagePointer += oldOffset + 1 + sizeof(struct allocationData);
-            printf("Go seg!\n");
             mprotect( physicalMemory,TotalPhysicalPages*BytesPerPage, PROT_NONE);
             char temp = *((char*)pagePointer);
-            setAlarm(0,0);
             mprotect( physicalMemory,TotalPhysicalPages*BytesPerPage, PROT_READ | PROT_WRITE);
             allocDataPointer = (struct allocationData*)((char*)pagePointer - sizeof(struct allocationData));
             allocDataPointer->length = numberOfBytes;
-            printf("Allocating no of pages: %d, Alloc AD is %p\n",allocDataPointer->length,allocDataPointer);
             allocDataPointer->threadID = ThreadReq;
             allocDataPointer->numberOfPages = 1;
             allocDataPointer->firstThreadBlockNumber = startPtr->threadBlockNumber;
@@ -167,8 +167,7 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
         quantumAllocation = 10;
     }
     
-    
-    printf("returning pointer: %p\n",pagePointer);
+    inAlloc = 0;
     setAlarm((int)(quantumAllocation/1000),quantumAllocation%1000);
     
     return pagePointer;
@@ -281,7 +280,7 @@ void swapPagesAndPTRows(int pageNum1,int pageNum2){
         
         char *PG1 = getPagePointerFromNumber(pageNum1);
         char *PG2 = getPagePointerFromNumber(pageNum2);
-        
+        //printf("Swapping: %p and %p\n",PG1,PG2);
         for(i = 0; i < BytesPerPage ; i++){
             tempChar = *(PG1+i);
             *(PG1+i) = *(PG2+i);
@@ -291,7 +290,7 @@ void swapPagesAndPTRows(int pageNum1,int pageNum2){
     else {
         
         
-        printf("Swapping page!\n");
+        printf("Swapping page from Swapfile!\n");
         //swapFile = fopen("swapfile","w+");
         int pageNum1New = pageNum1 - TotalPhysicalPages;
         char *PG2 = getPagePointerFromNumber(pageNum2);
@@ -330,6 +329,7 @@ void swapPagesAndPTRows(int pageNum1,int pageNum2){
 
 static void handler(int sig, siginfo_t *si, void *unused) {
     setAlarm(0,0);
+    //printf("Seg Go!!!\n");
     mprotect(physicalMemory,BytesPerPage*TotalPhysicalPages,PROT_READ | PROT_WRITE);
 
     int TID = THREADREQ;
@@ -367,7 +367,8 @@ static void handler(int sig, siginfo_t *si, void *unused) {
         quantumAllocation = 10;
     }
     
-    setAlarm((int)(quantumAllocation/1000),quantumAllocation%1000);
+    if(inDealloc == 0 && inAlloc == 0)  setAlarm((int)(quantumAllocation/1000),quantumAllocation%1000);
+    else setAlarm(0,0);
     
 }
 
@@ -388,23 +389,25 @@ char* getPhyMem(){
 
 
 int mydeallocate(void* address,char* fileName,char* lineNumber,int ThreadReq){
-    
+    inDealloc = 1;
     
     setAlarm(0,0);
-    printf("ncoming pointer!! %p\n",address);
+    mprotect( physicalMemory,TotalPhysicalPages*BytesPerPage,PROT_NONE);
+    //printf("ncoming pointer!! %p and thread %d\n",address,ThreadReq);
     struct allocationData* ad = (struct allocationData*)((char*)address - sizeof(struct allocationData));
-    //int numberOfBytesUsed = ad->length;    // will cause segfault
-    printf("######numberOfPages is %d, ad address is %p\n",ad->numberOfPages,ad);
+    int numberOfBytesUsed = ad->length;    // will cause segfault
+    //printf("######numberOfPages is %d, ad address is %p\n",ad->numberOfPages,ad);
     //int numberOfBytesUsedIncludingAllocData = ad->length + sizeof(struct allocationData);
     int numberOfPagesUsed = ad->numberOfPages;
-    int threadIDFromAllocData = ad->threadID;
+    int threadIDFromAllocData = ThreadReq;
     int threadBlockNumberFromAllocData = ad->firstThreadBlockNumber;
     
     mprotect( physicalMemory,TotalPhysicalPages*BytesPerPage, PROT_READ | PROT_WRITE);
     
     struct PTRow* startPtr = NULL;
     
-    int i,breakFlag=0;
+    int i,breakFlag;
+    breakFlag = 0;
     
     for (i = 0; i<TotalPagesUsedByPTRows; i++) {
         
@@ -413,7 +416,7 @@ int mydeallocate(void* address,char* fileName,char* lineNumber,int ThreadReq){
         for (j =0; j<PTRowsPerPage; j++) {
             struct PTRow* ptr = (struct PTRow*)(ptrOut + j*(sizeof(struct PTRow)));
             
-            if(ptr->threadID == threadIDFromAllocData && ptr->threadBlockNumber == threadBlockNumberFromAllocData){
+            if(ptr->threadID == ThreadReq && ptr->threadBlockNumber == threadBlockNumberFromAllocData){
                 startPtr = ptr;
                 breakFlag = 1;
                 break;
@@ -425,7 +428,7 @@ int mydeallocate(void* address,char* fileName,char* lineNumber,int ThreadReq){
     }
     
     for(i = 0; i < numberOfPagesUsed ; i++){
-        struct PTRow* inPtr = startPtr + sizeof(struct PTRow)*i;
+        struct PTRow* inPtr = (struct PTRow*)((char*)startPtr + sizeof(struct PTRow)*i);
         inPtr->allocationCount--;
         if(inPtr->allocationCount == 0){
             inPtr->isAllocated = 0;
@@ -444,9 +447,9 @@ int mydeallocate(void* address,char* fileName,char* lineNumber,int ThreadReq){
         quantumAllocation = 100;
     }
     
+    inDealloc = 0;
     setAlarm((int)(quantumAllocation/1000),quantumAllocation%1000);
 
-    
     return 0;
 }
 

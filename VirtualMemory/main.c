@@ -26,14 +26,12 @@ void threadfunc1(){
     *(test) = 'd';
     *(test+1) = 'e';
     *(test+2) = 'f';
-    //*(test+4000000) = 'm';
+    *(test+4000000) = 'm';
     
     for(i = 0; i < 8 ; i++){
         sleep(1);
         printf("Thread1: test is: %c\n",*(test+i%3));
-        struct allocationData* tt = (struct allocationData*)((char*)test - sizeof(struct allocationData));
-        printf("Thread1: NOP is: %d, test is %p\n", tt->numberOfPages,test);
-      //  printf("Thread1: test is: %c\n",*(test+4000000));
+        printf("Thread1: test is: %c\n",*(test+4000000));
     //my_pthread_mutex_unlock(&mutex);
     }
     free(test);
@@ -52,16 +50,14 @@ void threadfunc2(){
     *(test) = 'a';
     *(test+1) = 'b';
     *(test+2) = 'c';
-    //*(test+4000000) = 'n';
+    *(test+4000000) = 'n';
     //free(yaw);
     for(i = 0; i < 6 ; i++){
         sleep(1);
         printf("Thread2: test is: %c\n",*(test+i%3));
-        struct allocationData* tt = (struct allocationData*)((char*)test - sizeof(struct allocationData));
-        printf("Thread2: NOP is: %d, test is %p\n", tt->numberOfPages,test);
-      //  printf("Thread2: test is: %c\n",*(test+4000000));
+        printf("Thread2: test is: %c\n",*(test+4000000));
     }
-    free(test);
+    //free(test);
     //my_pthread_mutex_unlock(&mutex);
 }
 
