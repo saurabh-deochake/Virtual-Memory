@@ -416,12 +416,13 @@ int mydeallocate(void* address,char* fileName,char* lineNumber,int ThreadReq){
         for (j =0; j<PTRowsPerPage; j++) {
             struct PTRow* ptr = (struct PTRow*)(ptrOut + j*(sizeof(struct PTRow)));
             
-            if(ptr->isAllocated == 1 && ptr->threadID == ThreadReq && ptr->threadBlockNumber == threadBlockNumberFromAllocData){
+            if(ptr->isAllocated == 1 && ptr->threadID == ThreadReq){
                 int y;
                 for(y = 0; y<numberOfPagesUsed ; y++){
                     if(ptr->threadBlockNumber == threadBlockNumberFromAllocData + y){
                         //startPtr = ptr;
                         //breakFlag = 1;
+                        //printf("Page is %d %d %d\n",ptr->threadID,ptr->threadBlockNumber,numberOfPagesUsed);
                         ptr->allocationCount--;
                         if(ptr->allocationCount == 0){
                             ptr->isAllocated = 0;
@@ -433,9 +434,6 @@ int mydeallocate(void* address,char* fileName,char* lineNumber,int ThreadReq){
                 //break;
                 
             }
-        }
-        if(breakFlag == 1){
-            //break;
         }
     }
 
