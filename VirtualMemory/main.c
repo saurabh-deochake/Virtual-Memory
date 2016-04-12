@@ -21,19 +21,22 @@ void threadfunc1(){
     //my_pthread_mutex_lock(&mutex);
     int i;
     
-    int numb = sizeof(char)*6194304;
-    char* test = malloc(numb);
+    int numb = 6194304;
+    char* test = malloc(6194304);
     *(test) = 'd';
     *(test+1) = 'e';
     *(test+2) = 'f';
-    *(test+4000000) = 'm';
+    //*(test+4000000) = 'm';
     
     for(i = 0; i < 8 ; i++){
         sleep(1);
         printf("Thread1: test is: %c\n",*(test+i%3));
-        printf("Thread1S: test is: %c\n",*(test+4000000));
+        struct allocationData* tt = (struct allocationData*)((char*)test - sizeof(struct allocationData));
+        printf("Thread1: NOP is: %d, test is %p\n", tt->numberOfPages,test);
+      //  printf("Thread1: test is: %c\n",*(test+4000000));
     //my_pthread_mutex_unlock(&mutex);
     }
+    free(test);
 }
 /* Name:     threadfunc2
  * Input:    None
@@ -44,19 +47,21 @@ void threadfunc2(){
     //my_pthread_mutex_lock(&mutex);
     int i;
     
-    int numb = sizeof(char)*4194304;
-    char* test = malloc(numb);
+    int numb = 4194304;
+    char* test = malloc(4194304);
     *(test) = 'a';
     *(test+1) = 'b';
     *(test+2) = 'c';
-    *(test+4000000) = 'n';
+    //*(test+4000000) = 'n';
     //free(yaw);
     for(i = 0; i < 6 ; i++){
         sleep(1);
         printf("Thread2: test is: %c\n",*(test+i%3));
-        printf("Thread2: test is: %c\n",*(test+4000000));
+        struct allocationData* tt = (struct allocationData*)((char*)test - sizeof(struct allocationData));
+        printf("Thread2: NOP is: %d, test is %p\n", tt->numberOfPages,test);
+      //  printf("Thread2: test is: %c\n",*(test+4000000));
     }
-    //free(test);
+    free(test);
     //my_pthread_mutex_unlock(&mutex);
 }
 
@@ -78,7 +83,6 @@ void threadfunc3(){
         my_pthread_yield();
         sleep(0.1);
         printf("POST YIELD: ThreadFunc3\n");
-        //my_pthread_exit(NULL);
     }
     my_pthread_mutex_unlock(&mutex);
 }
@@ -119,7 +123,7 @@ int main(int argc, const char * argv[]) {
     printf("Execution time %d\n", end.tv_usec - start.tv_usec);
     printf("Ending main!\n");
     
-    
+    shutDown();
     
     return 0;
 }

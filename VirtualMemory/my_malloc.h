@@ -16,7 +16,12 @@
 
 extern int GthreadID;
 
-
+struct allocationData {
+    int threadID;
+    int firstThreadBlockNumber;
+    int length;
+    int numberOfPages;
+};
 
 void initMemoryStructures();
 
