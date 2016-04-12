@@ -35,17 +35,17 @@ void threadfunc2(){
     //my_pthread_mutex_lock(&mutex);
     int i;
     
-    char* test = malloc(4);//myallocate(4, "test ", "test" ,THREADREQ);
-    *(test) = 'a';
-    *(test+1) = 'b';
-    *(test+2) = 'c';
-    printf("test is:%p %c%c%c\n",test,*(test),*(test+1),*(test+2));
-    free(test);//mydeallocate(test, "test", "test", GthreadID);
-    
-    //int numb = sizeof(char);
-    //char* yaw = (char*)malloc(numb);
-    //*yaw = "5";
-    //free(yaw);
+    //char* test = malloc(4);//myallocate(4, "test ", "test" ,THREADREQ);
+    //*(test) = 'a';
+    //*(test+1) = 'b';
+    //*(test+2) = 'c';
+    //printf("test is:%p %c%c%c\n",test,*(test),*(test+1),*(test+2));
+    //free(test);//mydeallocate(test, "test", "test", GthreadID);
+
+    int numb = sizeof(char);
+    char* yaw = (char*)malloc(numb);
+    *yaw = 'a';
+    free(yaw);
     for(i = 0; i < 6 ; i++){
         sleep(1);
         printf("ThreadFunc2\n");
@@ -80,7 +80,7 @@ void threadfunc3(){
 
 int main(int argc, const char * argv[]) {
     
-    printf("Start!");
+    printf("Start!\n");
     
     my_pthread_t thread1,thread2,thread3;
     init_threads();

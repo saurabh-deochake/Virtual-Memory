@@ -21,8 +21,6 @@
 #include "my_queue.h"
 #include "my_malloc.h"
 
-#define malloc(x) myallocate(x, __FILE__, __LINE__, THREADREQ)
-#define free(x) mydeallocate(x, __FILE__, __LINE__, THREADREQ)
 
 /* Name:     addElementToQueue
  * Input:    Pointer to thread structure and scheduler queue pointer

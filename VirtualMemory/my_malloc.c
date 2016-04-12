@@ -55,6 +55,7 @@ int PageNumberOfFirstExtraPTRow;
 
 
 void initMemoryStructures(){
+    
     TotalPages = TotalPhysicalPages + TotalSwPages;
     TotalPTRows = TotalPhysicalPages + TotalSwPages;
     PTRowsPerPage = (BytesPerPage / sizeof(struct PTRow));
@@ -65,20 +66,17 @@ void initMemoryStructures(){
     remainingFreeFrames = TotalUsablePages + TotalSwPages;
     PageNumberOfFirstExtraPTRow = (TotalPhysicalPages - TotalPagesUsedByPTRows - 1);
     
-    
     //#ifdef __APPLE__
     //physicalMemory = malloc(8388608);
     //#else
     posix_memalign(&physicalMemoryVoidPointer,4096, TotalPhysicalPages*BytesPerPage);
     physicalMemory = (char*)physicalMemoryVoidPointer;
     //#endif
-    
     //SWAP CODE - New Swap file is defined with size 16MB
     swapFile = fopen("swapfile","w+");// Create a file named swapfile with read and write permissions
     ftruncate(fileno(swapFile), TotalSwPages*BytesPerPage); //Size of Swap File 16MB
     fclose(swapFile);
     swapMemoryPointer= swapFile;
-    
     printf("Physical memory starts from %p\n",physicalMemory);
     printf("page memory starts from %p\n",physicalMemory+TotalPagesUsedByPTRows*BytesPerPage);
 
@@ -129,19 +127,20 @@ void initMemoryStructures(){
 
 
 void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq){
+    
+
+    setAlarm(0,0);
+    
+    
     printf("ThreadVal is %d\n",ThreadReq);
     
-    if(hasInitMemoryStructures == -1){
-        initMemoryStructures();
-        hasInitMemoryStructures = 1;
-    }
-    
-    mprotect( physicalMemory,TotalPhysicalPages*BytesPerPage, PROT_READ | PROT_WRITE | PROT_EXEC);
+    mprotect( physicalMemory,TotalPhysicalPages*BytesPerPage, PROT_READ | PROT_WRITE);
     int numberOfPagesRequested = numberOfBytes/4096 + 1;
     int size =  numberOfBytes + sizeof(struct allocationData);
     
     if(numberOfPagesRequested > remainingFreeFrames){
         printf("Limit Exceeded");
+        setAlarm(0,10);
         return NULL;
     }
     
@@ -171,8 +170,21 @@ void* myallocate(int numberOfBytes,char* fileName,char* lineNumber,int ThreadReq
         
     }
     mprotect( physicalMemory, TotalPhysicalPages*BytesPerPage, PROT_NONE);
+    
+    long currentTimestamp = getCurrentTimestamp();
+    currentThread->timeSpent = currentThread->timeSpent + currentTimestamp - currentThread->startTimestamp;
+    long quantumAllocation = FIRST_QUEUE_QUANTA - currentThread->timeSpent;
+    if (quantumAllocation <= 0) {
+        //printf("QA is 1000\n");
+        quantumAllocation = 10;
+    }
+    
+    
     printf("returning pointer: %p\n",pagePointer);
+    setAlarm((int)(quantumAllocation/1000),quantumAllocation%1000);
+    
     return pagePointer;
+    
 }
 
 
@@ -330,6 +342,7 @@ void swapPagesAndPTRows(int pageNum1,int pageNum2){
  
 
 static void handler(int sig, siginfo_t *si, void *unused) {
+    setAlarm(0,0);
     //printf("Entering Handler\n");
     //printf("Got SIGSEGV at address: 0x%lx\n",(long) si->si_addr);
     mprotect(physicalMemory,BytesPerPage*TotalPhysicalPages,PROT_READ | PROT_WRITE | PROT_EXEC);
@@ -367,6 +380,16 @@ static void handler(int sig, siginfo_t *si, void *unused) {
         exit(0);
     }
     
+    long currentTimestamp = getCurrentTimestamp();
+    currentThread->timeSpent = currentThread->timeSpent + currentTimestamp - currentThread->startTimestamp;
+    long quantumAllocation = FIRST_QUEUE_QUANTA - currentThread->timeSpent;
+    if (quantumAllocation <= 0) {
+        //printf("QA is 1000\n");
+        quantumAllocation = 10;
+    }
+    
+    setAlarm((int)(quantumAllocation/1000),quantumAllocation%1000);
+    
     //printf("End of Handler\n");
     
     //printf("Got SIGSEGV at address: 0x%lx\n",(long) si->si_addr);
@@ -378,7 +401,10 @@ void mprotectFunc(){    //void *addr, size_t len, int prot){
     mprotect(physicalMemory,BytesPerPage*TotalPhysicalPages,PROT_NONE);
 }
 
-
+void unmprotectFunc(){    //void *addr, size_t len, int prot){
+    //mprotect(addr,len,prot);
+    mprotect(physicalMemory,BytesPerPage*TotalPhysicalPages,PROT_READ | PROT_WRITE);
+}
 /*int getByteAdditionsForNthPage(int i){
     return (TotalPagesUsedByPTRows + i)*BytesPerPage;
 }*/
@@ -393,6 +419,9 @@ char* getPhyMem(){
 
 int mydeallocate(void* address,char* fileName,char* lineNumber,int ThreadReq){
     
+    
+    setAlarm(0,0);
+    
     struct allocationData* ad = (struct allocationData*)(address - sizeof(struct allocationData));
     int numberOfBytesUsed = ad->length;    // will cause segfault
     int numberOfBytesUsedIncludingAllocData = ad->length + sizeof(struct allocationData);
@@ -400,7 +429,7 @@ int mydeallocate(void* address,char* fileName,char* lineNumber,int ThreadReq){
     int threadIDFromAllocData = ad->threadID;
     int threadBlockNumberFromAllocData = ad->firstThreadBlockNumber;
     
-    mprotect( physicalMemory,TotalPhysicalPages*BytesPerPage, PROT_READ | PROT_WRITE | PROT_EXEC);
+    mprotect( physicalMemory,TotalPhysicalPages*BytesPerPage, PROT_READ | PROT_WRITE);
     
     //int tBlock = (int)(((char*)address - (physicalMemory + TotalPagesUsedByPTRows*BytesPerPage)))/BytesPerPage;
     //int threadID = ThreadReq;
@@ -440,6 +469,17 @@ int mydeallocate(void* address,char* fileName,char* lineNumber,int ThreadReq){
     
     
     mprotect( physicalMemory, TotalPhysicalPages*BytesPerPage, PROT_NONE);
+    
+    long currentTimestamp = getCurrentTimestamp();
+    currentThread->timeSpent = currentThread->timeSpent + currentTimestamp - currentThread->startTimestamp;
+    long quantumAllocation = FIRST_QUEUE_QUANTA - currentThread->timeSpent;
+    if (quantumAllocation <= 0) {
+        //printf("QA is 1000\n");
+        quantumAllocation = 10;
+    }
+    
+    setAlarm((int)(quantumAllocation/1000),quantumAllocation%1000);
+
     
     return 0;
 }

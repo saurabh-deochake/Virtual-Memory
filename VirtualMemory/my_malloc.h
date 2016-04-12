@@ -38,6 +38,8 @@ static void handler(int sig, siginfo_t *si, void *unused);
 
 void mprotectFunc();
 
+void unmprotectFunc();
+
 //int getByteAdditionsForNthPage();
 
 //int* mydeallocate(int size,char* fileName,char* lineNumber,int ThreadReq)

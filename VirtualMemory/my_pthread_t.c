@@ -37,7 +37,7 @@
 
 struct Queue queue[MAX_QUEUE_COUNT];
 static int currentQueue = 0;
-static my_pthread_t *currentThread = 0;
+my_pthread_t *currentThread = 0;
 static int inMainThread = 1;
 static ucontext_t main_context;
 static int id = 1;
@@ -54,14 +54,7 @@ void setAlarm(int seconds,suseconds_t microseconds);
 
 void init_threads()
 {
-    //queue1 = malloc(sizeof(struct Queue));
-    /*int i;
-     for ( i = 0; i < MAX_QUEUE_COUNT; ++ i )
-     {
-        
-     }
-    
-    return;*/
+        initMemoryStructures();
 }
 
 /* Name:     thread_start
@@ -73,8 +66,8 @@ void init_threads()
  **/
 void thread_start(void (*t_func)(void)){
     //printf("Entering a thread\n");
-    THREADREQ = currentThread->id;
-    mprotectFunc();
+    //THREADREQ = currentThread->id;
+    //mprotectFunc();
     t_func();
     currentThread->isFinished = 1;
     my_pthread_yield();
@@ -89,16 +82,11 @@ void thread_start(void (*t_func)(void)){
  *           the next in the queue.
  **/
 void my_pthread_yield(){
-    //printf("Yeilding...\n");
-    THREADREQ = 0;
-    mprotectFunc();
     
     long currentTimestamp = getCurrentTimestamp();
     setAlarm(0,0);
     //alarm(0);
     if (inMainThread == 0) {
-        printf("Before main swapContext*************\n");
-
         currentThread->timeSpent = currentThread->timeSpent + currentTimestamp - currentThread->startTimestamp;
         
         inMainThread = 1; //In main thread
@@ -130,7 +118,7 @@ void my_pthread_yield(){
  *           on specific alarms change the context of threads.
  **/
 void scheduler(){
-    
+    printf("in scheduler\n");
     
     if((currentThread!= 0 && currentThread->isFinished == 1) || endThread == 1){
         endThread = 0;
@@ -191,18 +179,15 @@ void scheduler(){
     }
     //printf("Q.A. for thread%d is %ld\n bcause timeSpnt is %ld\n",currentThread->id,quantumAllocation,currentThread->timeSpent);
     inMainThread = 0;
-    //THREADREQ = 0;
-    //mprotectFunc();
     signal(SIGALRM, changeContext); //Change context on SIGALRM
     currentThread->startTimestamp = getCurrentTimestamp();
     //alarm(quantumAllocation);
+    
+    THREADREQ = currentThread->id;
+    mprotectFunc();
     setAlarm((int)(quantumAllocation/1000),quantumAllocation%1000);
-    printf("Before thread swapContext %p   %p\n",&main_context,&currentThread->context);
     swapcontext(&main_context,&currentThread->context);
-    printf("After thread swapContext\n");
     inMainThread = 1; //Come back to main thread
-    //THREADREQ = 0;
-    //mprotectFunc();
 }
 
 /* Name:     changeContext
@@ -226,8 +211,6 @@ int my_pthread_create(my_pthread_t * thread, void * attr, void (*function)(void)
     //printf("start creation!\n");
     //if(nextQueueIndex == MAX_THREAD_COUNT) return THREAD_POOL_SATURATED_RETURN_VALUE;
     // Set values to some thread state related stuff
-    THREADREQ = 0;
-    mprotectFunc();
     
     currentQueue = 0;
 
@@ -237,7 +220,6 @@ int my_pthread_create(my_pthread_t * thread, void * attr, void (*function)(void)
     thread->timeSpent = 0;
     getcontext(&(thread->context)); //fetch the context
     thread->context.uc_link = 0;
-    printf("Calling Malloc!!!!\n");
     thread->stack = malloc( THREAD_STACK );
     thread->context.uc_stack.ss_sp = thread->stack;
     thread->context.uc_stack.ss_size = THREAD_STACK;

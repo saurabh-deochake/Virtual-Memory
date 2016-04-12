@@ -50,6 +50,7 @@ typedef struct {
 } my_pthread_mutex_t;
 
 extern int THREADREQ;
+extern my_pthread_t *currentThread;
 
 //Creates a pthread that executes function. Attributes are ignored.
 extern int my_pthread_create(my_pthread_t * thread, void * attr, void (*function)(void), void * arg);
