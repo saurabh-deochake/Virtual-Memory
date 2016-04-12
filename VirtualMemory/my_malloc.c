@@ -64,7 +64,7 @@ void initMemoryStructures(){
     posix_memalign(&physicalMemoryVoidPointer,4096, TotalPhysicalPages*BytesPerPage);
     physicalMemory = (char*)physicalMemoryVoidPointer;
 
-    swapFile = fopen("swapfile","rb+");// Create a file named swapfile with read and write permissions
+    swapFile = fopen("swapfile","w+");// Create a file named swapfile with read and write permissions
     ftruncate(fileno(swapFile), TotalSwPages*BytesPerPage); //Size of Swap File 16MB
     swapMemoryPointer= swapFile;
     
@@ -347,7 +347,7 @@ static void handler(int sig, siginfo_t *si, void *unused) {
             if(ptr->isAllocated == 1 && ptr->threadID == TID && ptr->threadBlockNumber == tBlock){
                 swapPagesAndPTRows(ptr->PageNum,tBlock);
                 mprotect(physicalMemory,BytesPerPage*TotalPhysicalPages,PROT_NONE);
-                mprotect(getPagePointerFromNumber(tBlock),BytesPerPage,PROT_READ | PROT_WRITE | PROT_EXEC);
+                mprotect(getPagePointerFromNumber(tBlock),BytesPerPage,PROT_READ | PROT_WRITE);
                 flag = 1;
                 break;
             }
@@ -416,28 +416,29 @@ int mydeallocate(void* address,char* fileName,char* lineNumber,int ThreadReq){
         for (j =0; j<PTRowsPerPage; j++) {
             struct PTRow* ptr = (struct PTRow*)(ptrOut + j*(sizeof(struct PTRow)));
             
-            if(ptr->threadID == ThreadReq && ptr->threadBlockNumber == threadBlockNumberFromAllocData){
-                startPtr = ptr;
-                breakFlag = 1;
-                break;
+            if(ptr->isAllocated == 1 && ptr->threadID == ThreadReq && ptr->threadBlockNumber == threadBlockNumberFromAllocData){
+                int y;
+                for(y = 0; y<numberOfPagesUsed ; y++){
+                    if(ptr->threadBlockNumber == threadBlockNumberFromAllocData + y){
+                        //startPtr = ptr;
+                        //breakFlag = 1;
+                        ptr->allocationCount--;
+                        if(ptr->allocationCount == 0){
+                            ptr->isAllocated = 0;
+                            ptr->endOffset = -1;
+                            remainingFreeFrames++;
+                        }
+                    }
+                }
+                //break;
+                
             }
         }
         if(breakFlag == 1){
-            break;
+            //break;
         }
     }
-    
-    for(i = 0; i < numberOfPagesUsed ; i++){
-        struct PTRow* inPtr = (struct PTRow*)((char*)startPtr + sizeof(struct PTRow)*i);
-        inPtr->allocationCount--;
-        if(inPtr->allocationCount == 0){
-            inPtr->isAllocated = 0;
-            inPtr->endOffset = -1;
-            remainingFreeFrames++;
-        }
-    }
-    
-    
+
     mprotect( physicalMemory, TotalPhysicalPages*BytesPerPage, PROT_NONE);
     
     long currentTimestamp = getCurrentTimestamp();

@@ -2,7 +2,7 @@
 //  main.c
 //  VirtualMemory
 //
-//  Created by Ronil Mehta on 29/03/16.
+//  Created by Ronil Mehta(RVM41) on 29/03/16.
 //  Copyright (c) 2016 Ronil Mehta. All rights reserved.
 //
 
@@ -57,7 +57,7 @@ void threadfunc2(){
         printf("Thread2: test is: %c\n",*(test+i%3));
         printf("Thread2: test is: %c\n",*(test+4000000));
     }
-    //free(test);
+    free(test);
     //my_pthread_mutex_unlock(&mutex);
 }
 
@@ -116,7 +116,7 @@ int main(int argc, const char * argv[]) {
      **/
     my_pthread_mutex_destroy(&mutex);
     gettimeofday(&end, NULL);
-    printf("Execution time %d\n", end.tv_usec - start.tv_usec);
+    //printf("Execution time %d\n", end.tv_usec - start.tv_usec);
     printf("Ending main!\n");
     
     shutDown();
