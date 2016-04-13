@@ -333,7 +333,7 @@ static void handler(int sig, siginfo_t *si, void *unused) {
     mprotect(physicalMemory,BytesPerPage*TotalPhysicalPages,PROT_READ | PROT_WRITE);
 
     int TID = THREADREQ;
-    int tBlock = (int)(((char*)si->si_addr - (physicalMemory + sizeof(struct allocationData) + TotalPagesUsedByPTRows*BytesPerPage)))/BytesPerPage;
+    int tBlock = (int)(((char*)si->si_addr - (physicalMemory + TotalPagesUsedByPTRows*BytesPerPage)))/BytesPerPage;
 
     int flag = -1;
     int i;
